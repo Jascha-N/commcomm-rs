@@ -1,0 +1,5 @@
+.cargo/
+.vscode/
+target/
+*.exe
+build.options.json

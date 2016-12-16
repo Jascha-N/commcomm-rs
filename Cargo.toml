@@ -1,0 +1,65 @@
+[package]
+name = "commcomm"
+version = "0.1.0"
+authors = ["Jascha Neutelings <neutelings.jascha@gmail.com>"]
+build = "build.rs"
+
+[[bin]]
+name = "commcomm-rs"
+doc = false
+
+[[bin]]
+name = "dict"
+path = "src/bin/dict.rs"
+doc = false
+
+[dependencies]
+chrono = "0.2"
+clap = "2.19"
+env_logger = "0.3"
+error-chain = "0.7"
+flate2 = "0.2"
+lazy_static = "0.2"
+log = "0.3"
+serde = "0.8"
+serde_derive = "0.8"
+serde_json = "0.8"
+serial = "0.3"
+tempdir = "0.3"
+wait-timeout = "0.1"
+
+[target."cfg(windows)".dependencies]
+kernel32-sys = "0.2"
+ole32-sys = "0.2"
+user32-sys = "0.2"
+winapi = "0.2"
+
+[dependencies.conrod]
+version = "0.47"
+optional = true
+default-features = false
+features = ["glium", "glutin"]
+
+[dependencies.cursive]
+version = "0.3"
+optional = true
+default-features = false
+features = ["pancurses"]
+
+[dependencies.serial_enumerate]
+git = "https://github.com/Geemili/serial-enumerate.git"
+
+[dependencies.toml]
+version = "0.2"
+default-features = false
+features = ["serde"]
+
+[features]
+default = ["conrod"]
+
+[build-dependencies]
+regex = "0.1"
+
+[profile.release]
+lto = true
+panic = "abort"

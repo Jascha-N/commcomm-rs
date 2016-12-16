@@ -1,0 +1,6 @@
+[submodule "libraries/Embedded_RingBuf_CPP"]
+	path = libraries/Embedded_RingBuf_CPP
+	url = https://github.com/wizard97/Embedded_RingBuf_CPP
+[submodule "libraries/ArduinoJson"]
+	path = libraries/ArduinoJson
+	url = https://github.com/bblanchon/ArduinoJson
