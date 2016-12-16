@@ -90,17 +90,17 @@ impl Window {
             })
         } else {
             display_build.build_glium()
-        }.chain_err(|| "Kon het venster niet creëren")?;
+        }.chain_err(|| text!("Could not create the window"))?;
 
         let (width, height) = {
             let window = display.get_window().unwrap();
             window.get_inner_size_pixels().unwrap()
         };
 
-        info!("Venster gecreëerd. OpenGL-versie: {}.", display.get_opengl_version_string());
+        info!(text!("Window created. OpenGL version: {}."), display.get_opengl_version_string());
 
         let mut theme = Theme {
-            name: "commcomm-rs standaard".to_string(),
+            name: "commcomm-rs standard".to_string(),
             background_color: color::LIGHT_GREY,
             label_color: color::BLACK,
             shape_color: color::BLACK,
@@ -125,7 +125,7 @@ impl Window {
 
         let renderer = Renderer::new(&display)
                                 .map_err(IntoBoxedError::into_boxed_error)
-                                .unwrap();//.chain_err(|| "Kon glium renderer niet creëren")?;
+                                .unwrap();//.chain_err(|| text!("Could not create glium renderer"))?;
         let apps = app_factories.iter().map(|factory| factory(ui.widget_id_generator())).collect();
 
         Ok(Window {
@@ -192,11 +192,11 @@ impl Window {
                ])
                .set(self.widgets.ROOT_CANVAS, ui);
 
-        TitleBar::new("Modus", self.widgets.MODE_CANVAS)
+        TitleBar::new(text!("Mode"), self.widgets.MODE_CANVAS)
                  .place_on_kid_area(false)
                  .set(self.widgets.MODE_TITLE, ui);
 
-        TitleBar::new("Bediening", self.widgets.CONTROL_CANVAS)
+        TitleBar::new(text!("Control"), self.widgets.CONTROL_CANVAS)
                  .place_on_kid_area(false)
                  .set(self.widgets.CONTROL_TITLE, ui);
 
@@ -244,8 +244,8 @@ impl Window {
             let mut target = self.display.draw();
             self.renderer.draw(&self.display, &mut target, &self.image_map)
                          .map_err(IntoBoxedError::into_boxed_error)
-                         .unwrap();//.chain_err(|| "Fout tijdens het tekenen")?;
-            target.finish().chain_err(|| "Fout bij het uitwisselen van de buffers")?;
+                         .unwrap();//.chain_err(|| text!("An error occured while drawing"))?;
+            target.finish().chain_err(|| text!("Error while swapping buffers"))?;
         }
 
         Ok(())
@@ -291,16 +291,16 @@ fn glutin_to_arduino_event(event: &GlutinEvent) -> Option<ArduinoEvent> {
 
 pub fn run() -> StdResult<(), ()> {
     fn run() -> Result<()> {
-        info!("De applicatie is gestart. Versie: {}. Debug-modus: {}.",
+        info!(text!("Application started. Version: {}. Debug mode: {}."),
             env!("CARGO_PKG_VERSION"),
-            if cfg!(debug_assertions) { "Ja" } else { "Nee" });
+            if cfg!(debug_assertions) { text!("Yes") } else { text!("No") });
         let mut window = Window::new(&[&Speech::new_app, &Editor::new_app])?;
         while window.update()? {
             thread::sleep(Duration::from_millis(1));
         }
-        info!("Het venster werd gesloten.");
+        info!(text!("The window was closed."));
         mem::drop(window);
-        info!("De applicatie wordt afgesloten.");
+        info!(text!("The application is shutting down."));
 
         Ok(())
     }
@@ -316,9 +316,9 @@ pub fn run() -> StdResult<(), ()> {
     if let Err(error) = run() {
         let mut chain = error.iter();
         let mut message = String::new();
-        let _ = write!(message, "Er is een fout opgetreden: {}.", chain.next().unwrap());
+        let _ = write!(message, text!("An error has occurred: {}."), chain.next().unwrap());
         for cause in chain {
-            let _ = write!(message, "\n  Veroorzaakt door:\n    {}.", cause);
+            let _ = write!(message, text!("\n  Caused by:\n    {}."), cause);
         }
 
         println!("{}", message);

@@ -1,18 +1,18 @@
 error_chain! {
     errors {
         Io(message: String) {
-            description("I/O fout")
+            description(text!("I/O error"))
             display("{}", message)
         }
 
         ArduinoResponse(command: String, code: ::arduino::ResponseCode) {
-            description("Arduino-antwoordfout")
-            display("Commando '{}' mislukte met de foutmelding: {}", command, code)
+            description(text!("Arduino response error"))
+            display(text!("Request '{}' failed with error: {}"), command, code)
         }
 
         ArduinoVerification(reason: Option<String>) {
-            description("Arduino-verifcatiefout")
-            display("Verificatie mislukt{}", reason.as_ref().map_or(String::new(), |reason| format!(": {}", reason)))
+            description(text!("Arduino verification error"))
+            display(text!("Verification failed{}"), reason.as_ref().map_or(String::new(), |reason| format!(": {}", reason)))
         }
     }
 }

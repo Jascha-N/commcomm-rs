@@ -30,7 +30,7 @@ impl<T> ToWide for T where T: AsRef<OsStr> {
 
 pub fn error_message_box(message: &str) {
     let message = message.to_wide();
-    let caption = "Fout".to_wide();
+    let caption = text!("Error").to_wide();
 
     unsafe {
         user32::MessageBoxW(ptr::null_mut(), message.as_ptr(), caption.as_ptr(),

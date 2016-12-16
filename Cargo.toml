@@ -55,7 +55,9 @@ default-features = false
 features = ["serde"]
 
 [features]
-default = ["conrod"]
+default = ["conrod", "lang_en_US"]
+lang_nl_NL = []
+lang_en_US = []
 
 [build-dependencies]
 regex = "0.1"

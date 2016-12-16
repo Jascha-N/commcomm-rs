@@ -63,17 +63,17 @@ impl Configuration {
             let mut reader = BufReader::new(file);
             let mut toml = String::new();
             reader.read_to_string(&mut toml).map(move |_| toml)
-        }).chain_err(|| "Kon het configuratiebestand niet inlezen").and_then(|toml| {
+        }).chain_err(|| text!("Could not read the configuration file")).and_then(|toml| {
             let mut parser = Parser::new(&toml);
             let result = parser.parse();
             for error in &parser.errors {
-                error!("Syntaxfout: {}.", error);
+                error!(text!("Syntax error: {}."), error);
             }
             result.map_or_else(|| Err(parser.errors[0].clone()), Ok)
-                  .chain_err(|| "Het configuratiebestand bevat syntaxfouten")
+                  .chain_err(|| text!("The configuration file contains syntax errors"))
         }).and_then(|table| {
             Deserialize::deserialize(&mut TomlDecoder::new(Value::Table(table)))
-                        .chain_err(|| "Het configuratiebestand is niet geldig")
+                        .chain_err(|| text!("The configuration file is invalid"))
         })
     }
 }

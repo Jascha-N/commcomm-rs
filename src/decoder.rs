@@ -42,10 +42,10 @@ impl Dictionary {
 
     fn from_config(config: &Configuration) -> Result<Option<Dictionary>> {
         config.decoder.prediction.dictionary.as_ref().map(|dict| {
-            File::open(dict).chain_err(|| "Kon het woordenboek niet openen").map(|file| {
+            File::open(dict).chain_err(|| text!("Could not open the dictionary file")).map(|file| {
                 BufReader::new(file).zlib_decode()
             }).and_then(|reader| {
-                serde_json::from_reader(reader).chain_err(|| "Kon het woordenboek niet inlezen")
+                serde_json::from_reader(reader).chain_err(|| text!("Could not parse the dictionary"))
             }).map(Some)
         }).unwrap_or_else(|| Ok(None))
     }
@@ -70,9 +70,9 @@ impl Dictionary {
     }
 
     pub fn write_to_file(&self, path: &Path) -> Result<()> {
-        File::create(path).chain_err(|| "Kon het woordenboek niet wegschrijven").and_then(|file| {
+        File::create(path).chain_err(|| text!("Could not write the dictionary file")).and_then(|file| {
             let mut writer = BufWriter::new(file).zlib_encode(Compression::Best);
-            serde_json::to_writer(&mut writer, self).chain_err(|| "Kon het woordenboek niet wegschrijven")
+            serde_json::to_writer(&mut writer, self).chain_err(|| text!("Could not write the dictionary file"))
         })
     }
 }
@@ -92,21 +92,21 @@ impl Decoder {
                 "question" => Input::Question,
                 "delete" => Input::Delete,
                 append if append.starts_with("append:") => Input::Append(append[7..].to_string()),
-                command => bail!("Onbekend commando in 'decoder.scheme': {}", command)
+                command => bail!(text!("Unknown command in 'decoder.scheme': {}"), command)
             };
 
             for &id in input {
                 if id >= config.arduino.sensors.len() {
-                    bail!("Sensorindex buiten bereik: {}", id);
+                    bail!(text!("Sensor index out of range: {}") , id);
                 }
                 if id == config.decoder.confirm {
-                    bail!("Sensorindex in 'decoder.scheme' mag niet gelijk zijn aan 'decoder.confirm'");
+                    bail!(text!("Sensor index in 'decoder.scheme' can not be equal to 'decoder.confirm'"));
                 }
             }
 
             if scheme.insert(input.clone(), command).is_some() {
                 let input = input.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ");
-                bail!("Invoer meerdere keren gedefinïeerd: [{}]", input);
+                bail!(text!("Input defined more than once: [{}]"), input);
             }
         }
 

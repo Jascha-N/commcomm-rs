@@ -22,6 +22,11 @@ extern crate wait_timeout;
 #[cfg(windows)] extern crate user32;
 #[cfg(windows)] extern crate winapi;
 
+#[cfg_attr(feature = "lang_en_US", path = "resources/lang/en_US.rs")]
+#[cfg_attr(feature = "lang_nl_NL", path = "resources/lang/nl_NL.rs")]
+#[macro_use]
+pub mod lang;
+
 pub mod arduino;
 pub mod config;
 pub mod decoder;

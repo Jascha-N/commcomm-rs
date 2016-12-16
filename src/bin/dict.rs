@@ -1,4 +1,4 @@
-extern crate commcomm;
+#[macro_use] extern crate commcomm;
 #[macro_use] extern crate clap;
 
 use commcomm::decoder::Dictionary;
@@ -10,18 +10,18 @@ use std::io::{BufRead, BufReader};
 use std::path::{PathBuf, Path};
 
 fn main() {
-    let matches = App::new("commcomm-rs dictionary builder")
+    let matches = App::new(text!("commcomm-rs dictionary tool"))
                       .version(crate_version!())
                       .author(crate_authors!())
-                      .about("Builds a dictionary file from word-frequency file.")
+                      .about(text!("Builds a dictionary file from word-frequency file."))
                       .arg(Arg::with_name("OUTPUT")
                                .short("o")
                                .long("output")
                                .value_name("FILE")
-                               .help("Sets a custom output file")
+                               .help(text!("Sets a custom output file"))
                                .takes_value(true))
                       .arg(Arg::with_name("INPUT")
-                               .help("Sets the input file to use")
+                               .help(text!("The input file to use"))
                                .required(true))
                       .get_matches();
 
