@@ -80,7 +80,7 @@ impl Drop for ArduinoController {
         if !thread::panicking() {
             mem::drop(self.command_sender.take());
             mem::drop(self.event_receiver.take());
-            info!(text!("Waiting for Arduino thread to finish"));
+            info!(text!("Waiting for Arduino thread to finish."));
             let _ = self.handle.take().unwrap().join();
         }
     }
@@ -154,7 +154,7 @@ impl ArduinoThread {
             Error(ErrorKind::ArduinoVerification(_), _) if !self.upload_tried => {
                 self.upload_tried = true;
                 log_full_error(&error);
-                info!(text!("Trying to reupload the sketch once"));
+                info!(text!("Trying to reupload the sketch once."));
                 self.port = Arduino::upload(&self.port)?.into_owned();
                 Arduino::open(&self.port, true)
             }

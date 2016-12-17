@@ -49,10 +49,10 @@ macro_rules! text {
     ("Sets a custom output file") => ("Stelt een aangepast uitvoerbestand in");
     ("The input file to use") => ("Het invoerbestand om te gebruiken");
     ("Could not change the sensor setting") => ("Kon sensorinstelling niet wijzigen");
-    ("Waiting for Arduino thread to finish") => ("Bezig met wachten op Arduino-thread.");
+    ("Waiting for Arduino thread to finish.") => ("Bezig met wachten op Arduino-thread.");
     ("Retrying in {} seconds.") => ("Opnieuw proberen over {} seconden.");
     ("The Arduino thread finished.") => ("De Arduino-thread is gestopt.");
-    ("Trying to reupload the sketch once") => ("Eenmalig proberen om de schets opnieuw te uploaden.");
+    ("Trying to reupload the sketch once.") => ("Eenmalig proberen om de schets opnieuw te uploaden.");
     ("Event buffer is full") => ("Gebeurtenisbuffer is vol");
     ("Serial port could not be opened") => ("Seriële poort kon niet worden geopend");
     ("Unknown error code: {}") => ("Onbekende foutcode: {}");
@@ -62,7 +62,7 @@ macro_rules! text {
     ("Unknown command") => ("Onbekend commando");
     ("Response buffer too small") => ("Antwoordbuffer te klein");
     ("Illegal parameter") => ("Ongeldige parameter");
-    ("Arduino is being reset") => ("Arduino wordt gereset.");
+    ("Arduino is being reset.") => ("Arduino wordt gereset.");
     ("Serial port could not be configured") => ("Seriële poort kon niet worden geconfigureerd");
     ("Waiting for the bootloader port.") => ("Bezig met het wachten op de bootloader-poort.");
     ("Bootloader port found: {}.") => ("Bootloader-poort gevonden: {}.");

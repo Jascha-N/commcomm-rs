@@ -199,7 +199,7 @@ pub struct Arduino(SystemPort);
 
 impl Arduino {
     fn cdc_reset(port: &Port) -> Result<()> {
-        info!(text!("Arduino is being reset"));
+        info!(text!("Arduino is being reset."));
         let mut port = port.open()?;
         port.reconfigure(&|settings| {
             settings.set_baud_rate(serial::Baud1200)?;
