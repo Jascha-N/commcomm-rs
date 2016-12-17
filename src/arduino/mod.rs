@@ -246,20 +246,24 @@ impl Arduino {
         }).chain_err(|| text!("Could not write to the sketch file"))?;
 
         info!(text!("The AVRDude process is being started."));
-        let mut process = Command::new("avrdude")
-                                  .arg("-v").arg("-v")
-                                  .arg("-C").arg(avrdude_conf_path)
-                                  .arg("-p").arg(board::MCU)
-                                  .arg("-c").arg(board::PROTOCOL)
-                                  .arg("-P").arg(port.name())
-                                  .arg("-b").arg(format!("{}", board::SPEED))
-                                  .arg("-D")
-                                  .arg(format!("-Uflash:w:{}:i", program_path.display()))
-                                  .stderr(Stdio::piped())
-                                  .stdout(Stdio::null())
-                                  .stdin(Stdio::null())
-                                  .spawn()
-                                  .chain_err(|| text!("Could not start the AVRDude process"))?;
+        let mut command = Command::new("avrdude");
+
+        #[cfg(windows)]
+        ::std::os::windows::process::CommandExt::creation_flags(&mut command, ::winapi::CREATE_NO_WINDOW);
+
+        let mut process = command.arg("-v").arg("-v")
+                                 .arg("-C").arg(avrdude_conf_path)
+                                 .arg("-p").arg(board::MCU)
+                                 .arg("-c").arg(board::PROTOCOL)
+                                 .arg("-P").arg(port.name())
+                                 .arg("-b").arg(format!("{}", board::SPEED))
+                                 .arg("-D")
+                                 .arg(format!("-Uflash:w:{}:i", program_path.display()))
+                                 .stderr(Stdio::piped())
+                                 .stdout(Stdio::null())
+                                 .stdin(Stdio::null())
+                                 .spawn()
+                                 .chain_err(|| text!("Could not start the AVRDude process"))?;
 
         let stderr = process.stderr.take().unwrap();
         stdthread::spawn(move || {

@@ -1,6 +1,6 @@
 //#![cfg_attr(debug_assertions, allow(dead_code))]
 #![recursion_limit = "1024"]
-#![feature(btree_range, collections_bound, proc_macro)]
+#![feature(btree_range, collections_bound, proc_macro, windows_process_extensions)]
 
 extern crate chrono;
 #[macro_use] extern crate conrod;

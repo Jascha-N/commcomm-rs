@@ -305,14 +305,6 @@ pub fn run() -> StdResult<(), ()> {
         Ok(())
     }
 
-    #[cfg(windows)]
-    fn error_message_box(message: &str) {
-        ::platform::windows::error_message_box(message);
-    }
-
-    #[cfg(not(windows))]
-    fn error_message_box(_: &str) {}
-
     if let Err(error) = run() {
         let mut chain = error.iter();
         let mut message = String::new();
@@ -322,7 +314,9 @@ pub fn run() -> StdResult<(), ()> {
         }
 
         println!("{}", message);
-        error_message_box(&message);
+
+        #[cfg(windows)]
+        ::platform::windows::error_message_box(&message);
 
         Err(())
     } else {
