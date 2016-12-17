@@ -3,16 +3,16 @@
 
 
 struct SensorConfig {
-    boolean active; // Whether this input is used with a flex sensor
+    bool active; // Whether this input is used with a flex sensor
     int min;        // Minimum usable value of the sensor based on resistance used [0, 1023]
     int max;        // Maximum usable value of the sensor based on resistance used [0, 1023]
-    byte low;       // Lower threshold (detrigger)
-    byte high;      // Upper threshold (trigger)
+    uint8_t low;       // Lower threshold (detrigger)
+    uint8_t high;      // Upper threshold (trigger)
 };
 
 struct SensorState {
-    boolean flexed;
-    byte raw;
+    bool flexed;
+    uint8_t raw;
 };
 
 enum class EventType {
@@ -24,7 +24,7 @@ enum class EventType {
 struct Event {
     EventType type;
     union {
-        byte sensor_id;
+        uint8_t sensor_id;
         /* ... */
     };
 };
@@ -42,7 +42,7 @@ enum class CommandResult {
 
 
 // The button pins and labels
-static const byte NUM_SENSORS = NUM_ANALOG_INPUTS;
+static const uint8_t NUM_SENSORS = NUM_ANALOG_INPUTS;
 
 // Number of events stored in the event queue
 static const size_t EVENT_QUEUE_SIZE = 4;
@@ -152,20 +152,20 @@ static CommandResult process_request(char *buffer) {
 
         json_response.printTo(buffer, MESSAGE_BUFFER_SIZE);
     } else if (strcmp(command, "set_sensor") == 0) {
-        byte id = json_request.get<byte>("id");
+        uint8_t id = json_request.get<uint8_t>("id");
         if (id >= NUM_SENSORS) {
             return CommandResult::ERROR_INVALID_PARAM;
         }
         SensorConfig &sensor = sensor_config[id];
         sensor.min = json_request.get<int>("min");
         sensor.max = json_request.get<int>("max");
-        sensor.low = json_request.get<byte>("low");
-        sensor.high = json_request.get<byte>("high");
+        sensor.low = json_request.get<uint8_t>("low");
+        sensor.high = json_request.get<uint8_t>("high");
         sensor.active = true;
 
         return CommandResult::SUCCESS_NULL;
     } else if (strcmp(command, "unset_sensor") == 0) {
-        byte id = json_request.get<byte>("id");
+        uint8_t id = json_request.get<uint8_t>("id");
         if (id >= NUM_SENSORS) {
             return CommandResult::ERROR_INVALID_PARAM;
         }
@@ -178,7 +178,7 @@ static CommandResult process_request(char *buffer) {
         if (!json_response.success()) {
             return CommandResult::ERROR_JSON_ALLOC;
         }
-        for (byte id = 0; id < NUM_SENSORS; id++) {
+        for (uint8_t id = 0; id < NUM_SENSORS; id++) {
             SensorConfig& config = sensor_config[id];
             SensorState& state = sensor_state[id];
 
@@ -206,7 +206,7 @@ static CommandResult process_request(char *buffer) {
 }
 
 static void process_inputs() {
-    for (byte id = 0; id < NUM_SENSORS; id++) {
+    for (uint8_t id = 0; id < NUM_SENSORS; id++) {
         SensorConfig& config = sensor_config[id];
         SensorState& state = sensor_state[id];
 
@@ -217,7 +217,7 @@ static void process_inputs() {
         // Limit sensor input to usable range and then map to [0, 255] range
         state.raw = map(constrain(analogRead(id), config.min, config.max),
                                   config.min, config.max, 0, 255);
-        boolean new_event = false;
+        bool new_event = false;
         Event event;
 
         if (state.raw > config.high && !state.flexed) {
@@ -241,7 +241,7 @@ static void process_inputs() {
 }
 
 void setup() {
-    for (byte id = 0; id < NUM_SENSORS; id++) {
+    for (uint8_t id = 0; id < NUM_SENSORS; id++) {
         pinMode(A0 + id, INPUT);
         sensor_state[id] = {false, 0};
         sensor_config[id] = {false, 0, 1023, 0, 255};
