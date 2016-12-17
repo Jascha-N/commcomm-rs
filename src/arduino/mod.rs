@@ -238,14 +238,14 @@ impl Arduino {
         let avrdude_conf_path = temp_dir.path().join("avrdude.conf");
         File::create(&avrdude_conf_path).and_then(|mut file| {
             file.write_all(board::AVRDUDE_CONFIG)
-        }).chain_err(|| text!("Could not write to the AVRDude configuration file"))?;
+        }).chain_err(|| text!("Could not write to the AVRDUDE configuration file"))?;
 
         let program_path = temp_dir.path().join("program.hex");
         File::create(&program_path).and_then(|mut file| {
             file.write_all(board::PROGRAM)
         }).chain_err(|| text!("Could not write to the sketch file"))?;
 
-        info!(text!("The AVRDude process is being started."));
+        info!(text!("The AVRDUDE process is being started."));
         let mut command = Command::new("avrdude");
 
         #[cfg(windows)]
@@ -263,7 +263,7 @@ impl Arduino {
                                  .stdout(Stdio::null())
                                  .stdin(Stdio::null())
                                  .spawn()
-                                 .chain_err(|| text!("Could not start the AVRDude process"))?;
+                                 .chain_err(|| text!("Could not start the AVRDUDE process"))?;
 
         let stderr = process.stderr.take().unwrap();
         stdthread::spawn(move || {
@@ -278,17 +278,17 @@ impl Arduino {
         });
 
         let status = process.wait_timeout(Duration::from_secs(60))
-                            .chain_err(|| text!("Error while waiting for the AVRDude process"))?;
+                            .chain_err(|| text!("Error while waiting for the AVRDUDE process"))?;
         if let Some(status) = status {
             if status.success() {
                 Ok(())
             } else {
-                Err(format!(text!("Uploading with AVRDude failed with error code: {}"),
+                Err(format!(text!("Uploading with AVRDUDE failed with error code: {}"),
                             status.code().map_or("<none>".to_string(), |code| code.to_string())).into())
             }
         } else {
-            process.kill().chain_err(|| text!("Could not kill the AVRDude process"))?;
-            bail!(text!("Waiting for the AVRDude process to finish timed out"));
+            process.kill().chain_err(|| text!("Could not kill the AVRDUDE process"))?;
+            bail!(text!("Waiting for the AVRDUDE process to finish timed out"));
         }
     }
 
