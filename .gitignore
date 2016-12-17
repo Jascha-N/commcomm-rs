@@ -1,5 +1,4 @@
 .cargo/
-.vscode/
 target/
-*.exe
 build.options.json
+config.toml
