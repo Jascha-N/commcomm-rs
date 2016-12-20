@@ -5,9 +5,10 @@ use error::*;
 
 use conrod::color;
 use conrod::{Colorable, Labelable, Positionable, Sizeable, Theme, Ui, UiBuilder};
-use conrod::backend::glutin;
+use conrod::backend::glutin as conrod_glutin;
 use conrod::backend::glium::Renderer;
 use conrod::image::Map;
+use conrod::event::Input;
 use conrod::text::{self, FontCollection};
 use conrod::theme::WidgetDefault;
 use conrod::widget::{list_select, title_bar, Button, Canvas, ListSelect, TitleBar, Widget};
@@ -15,7 +16,7 @@ use conrod::widget::{list_select, title_bar, Button, Canvas, ListSelect, TitleBa
 use glium::{DisplayBuild, Display};
 use glium::debug::{DebugCallbackBehavior, MessageType, Severity, Source};
 use glium::texture::Texture2d;
-use glutin::{Api, ElementState, Event as GlutinEvent, GlRequest, VirtualKeyCode, WindowBuilder};
+use glutin::{self, Api, ElementState, Event as GlutinEvent, GlRequest, VirtualKeyCode, WindowBuilder};
 
 use log::LogLevel;
 
@@ -52,6 +53,7 @@ widget_ids! {
 }
 
 pub struct Window {
+    display_builders: (WindowBuilder<'static>, WindowBuilder<'static>),
     display: Display,
     renderer: Renderer,
     ui: Ui,
@@ -64,33 +66,18 @@ pub struct Window {
 
 impl Window {
     pub fn new(app_factories: &[&AppFactory]) -> Result<Window> {
-        let display_build = WindowBuilder::new()
-                                          .with_gl(GlRequest::Specific(Api::OpenGl, (3, 1)))
-                                          .with_vsync()
-                                          .with_min_dimensions(WIDTH, HEIGHT)
-                                          .with_dimensions(WIDTH, HEIGHT)
-                                          .with_title("commcomm-rs");
+        let base_builder = WindowBuilder::new()
+                                         .with_gl(GlRequest::Specific(Api::OpenGl, (3, 1)))
+                                         .with_vsync()
+                                         .with_title("commcomm-rs");
 
-        let display = if cfg!(debug_assertions) {
-            fn callback(source: Source, typ: MessageType, severity: Severity, id: u32, report: bool, message: &str) {
-                if report {
-                    let level = match severity {
-                        Severity::Notification => LogLevel::Debug,
-                        Severity::Low => LogLevel::Info,
-                        Severity::Medium => LogLevel::Warn,
-                        Severity::High => LogLevel::Error
-                    };
-                    log!(target: &format!("<glium>::{:?}/{:?}:{}", source, typ, id), level, "{}", message);
-                }
-            }
+        let window_builder = base_builder.clone()
+                                         .with_min_dimensions(WIDTH, HEIGHT)
+                                         .with_dimensions(WIDTH, HEIGHT);
 
-            display_build.build_glium_debug(DebugCallbackBehavior::Custom {
-                callback: Box::new(callback),
-                synchronous: false
-            })
-        } else {
-            display_build.build_glium()
-        }.chain_err(|| text!("Could not create the window"))?;
+        let fullscreen_builder = base_builder.with_fullscreen(glutin::get_primary_monitor());
+
+        let display = Window::build_display(window_builder.clone())?;
 
         let (width, height) = {
             let window = display.get_window().unwrap();
@@ -129,6 +116,7 @@ impl Window {
         let apps = app_factories.iter().map(|factory| factory(ui.widget_id_generator())).collect();
 
         Ok(Window {
+            display_builders: (window_builder, fullscreen_builder),
             display: display,
             renderer: renderer,
             ui: ui,
@@ -140,34 +128,84 @@ impl Window {
         })
     }
 
-    fn handle_events(&mut self) -> bool {
-        let window = self.display.get_window().unwrap();
-        for event in self.display.poll_events() {
-            // if let GlutinEvent::Resized(x, y) = event {
-            //     if x == 0 || y == 0 {
-            //         continue;
-            //     }
-            // }
-
-            if let Some(event) = glutin::convert(event.clone(), &*window) {
-                self.ui.handle_event(event);
+    fn build_display(display_build: WindowBuilder<'static>) -> Result<Display> {
+        if cfg!(debug_assertions) {
+            fn callback(source: Source, typ: MessageType, severity: Severity, id: u32, report: bool, message: &str) {
+                if report {
+                    let level = match severity {
+                        Severity::Notification => LogLevel::Debug,
+                        Severity::Low => LogLevel::Info,
+                        Severity::Medium => LogLevel::Warn,
+                        Severity::High => LogLevel::Error
+                    };
+                    log!(target: &format!("<glium>::{:?}/{:?}:{}", source, typ, id), level, "{}", message);
+                }
             }
 
-            if let GlutinEvent::Closed = event {
-                return false;
+            display_build.build_glium_debug(DebugCallbackBehavior::Custom {
+                callback: Box::new(callback),
+                synchronous: false
+            })
+        } else {
+            display_build.build_glium()
+        }.chain_err(|| text!("Could not create the window"))
+    }
+
+    fn toggle_fullscreen(&mut self) -> Result<()> {
+        self.display = Window::build_display(self.display_builders.1.clone())?;
+        self.renderer = Renderer::new(&self.display)
+                                 .map_err(IntoBoxedError::into_boxed_error)
+                                 .unwrap();//.chain_err(|| text!("Could not create glium renderer"))?;
+
+        let window = self.display.get_window().unwrap();
+        if let Some(win_rect) = self.ui.rect_of(self.ui.window) {
+            let (win_w, win_h) = (win_rect.w() as u32, win_rect.h() as u32);
+            let (w, h) = window.get_inner_size_points().unwrap();
+            if w != win_w || h != win_h {
+                self.ui.handle_event(Input::Resize(w, h));
             }
         }
 
-        // if let Some(win_rect) = self.ui.rect_of(self.ui.window) {
-        //     let (win_w, win_h) = (win_rect.w() as u32, win_rect.h() as u32);
-        //     let (w, h) = window.get_inner_size_points().unwrap();
-        //     if w != win_w || h != win_h {
-        //         let event = ::conrod::event::Input::Resize(w, h);
-        //         self.ui.handle_event(event);
-        //     }
-        // }
+        mem::swap(&mut self.display_builders.0, &mut self.display_builders.1);
 
-        true
+        Ok(())
+    }
+
+    fn handle_events(&mut self) -> Result<bool> {
+        let mut closing = false;
+        let mut toggle_fullscreen = false;
+
+        {
+            let window = self.display.get_window().unwrap();
+            for event in self.display.poll_events() {
+                match event {
+                    GlutinEvent::Resized(0, 0) => {
+                        continue;
+                    }
+                    GlutinEvent::Closed => {
+                        closing = true;
+                    }
+                    GlutinEvent::KeyboardInput(ElementState::Released, _, Some(VirtualKeyCode::F11)) => {
+                        toggle_fullscreen = true;
+                    }
+                    _ => {}
+                }
+
+                if let Some(event) = conrod_glutin::convert(event, &*window) {
+                    self.ui.handle_event(event);
+                }
+            }
+        }
+
+        if closing {
+            Ok(false)
+        } else {
+            if toggle_fullscreen {
+                self.toggle_fullscreen()?;
+            }
+
+            Ok(true)
+        }
     }
 
     fn update_ui(&mut self) {
@@ -252,7 +290,7 @@ impl Window {
     }
 
     pub fn update(&mut self) -> Result<bool> {
-        if self.handle_events() {
+        if self.handle_events()? {
             self.update_ui();
             self.draw_if_changed()?;
 
