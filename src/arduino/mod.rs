@@ -421,7 +421,7 @@ impl Arduino {
         self.send_request("poll_events", &[])
     }
 
-    pub fn raw_values(&mut self) -> Result<Vec<Option<u8>>> {
+    pub fn raw_values(&mut self) -> Result<Vec<Option<u16>>> {
         self.send_request("raw_values", &[])
     }
 

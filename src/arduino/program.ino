@@ -12,7 +12,7 @@ struct SensorConfig {
 
 struct SensorState {
     bool flexed;
-    uint8_t raw;
+    int raw;
 };
 
 enum class EventType {
@@ -214,17 +214,18 @@ static void process_inputs() {
             continue;
         }
 
+        state.raw = analogRead(id);
         // Limit sensor input to usable range and then map to [0, 255] range
-        state.raw = map(constrain(analogRead(id), config.min, config.max),
-                                  config.min, config.max, 0, 255);
+        uint8_t input = map(constrain(state.raw, config.min, config.max),
+                            config.min, config.max, 0, 255);
         bool new_event = false;
         Event event;
 
-        if (state.raw > config.high && !state.flexed) {
+        if (input > config.high && !state.flexed) {
             event = {EventType::SENSOR_FLEXED, id};
             state.flexed = true;
             new_event = true;
-        } else if (state.raw < config.low && state.flexed) {
+        } else if (input < config.low && state.flexed) {
             event = {EventType::SENSOR_EXTENDED, id};
             state.flexed = false;
             new_event = true;
@@ -243,8 +244,6 @@ static void process_inputs() {
 void setup() {
     for (uint8_t id = 0; id < NUM_SENSORS; id++) {
         pinMode(A0 + id, INPUT);
-        sensor_state[id] = {false, 0};
-        sensor_config[id] = {false, 0, 1023, 0, 255};
     }
     Serial.begin(BAUDRATE);
 }
@@ -253,9 +252,15 @@ void loop() {
     // Do nothing while there is no connection
     if (!Serial) {
         while (!Serial) {}
+
+        // Clear event queue and reset state and disable sensors when a new connection is established
         Event dummy;
-        // Clear event queue when a new connection is established
         while (events.pull(&dummy)) {}
+
+        for (uint8_t id = 0; id < NUM_SENSORS; id++) {
+            sensor_state[id] = {false, 0};
+            sensor_config[id].active = false;
+        }
     }
 
     process_inputs();
