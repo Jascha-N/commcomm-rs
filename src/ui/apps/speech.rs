@@ -57,7 +57,7 @@ impl Speech {
 
 impl App for Speech {
     fn title(&self) -> &str {
-        text!("Speech")
+        t!("Speech")
     }
 
     fn update_ui(&mut self, root: Id, ui: &mut UiCell) {

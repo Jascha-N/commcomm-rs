@@ -48,7 +48,7 @@ impl SpeechEngine {
         unsafe {
             cvt(ole32::CoInitializeEx(ptr::null_mut(), w::COINIT_APARTMENTTHREADED))
                 .map(|_| Rc::new(SpeechEngine(())))
-                .chain_err(|| text!("Could not initialize the COM library"))
+                .chain_err(|| t!("Could not initialize the COM library"))
         }
     }
 }
@@ -74,7 +74,7 @@ impl SpeechEngineImpl for Rc<SpeechEngine> {
 
     fn tokens(&self, category: &str) -> Result<Vec<Token>> {
         let raw_tokens = TokenFinder::new(category).find_matching()
-            .chain_err(|| text!("Could not enumerate the available tokens"))?;
+            .chain_err(|| t!("Could not enumerate the available tokens"))?;
         let mut tokens = Vec::with_capacity(raw_tokens.len());
         for raw in raw_tokens {
             tokens.push(Token::new(self, raw, None)?);
@@ -84,7 +84,7 @@ impl SpeechEngineImpl for Rc<SpeechEngine> {
 
     fn token_from_id(&self, id: &str) -> Result<Token> {
         let token = get_token_from_id(id)
-            .chain_err(|| format!(text!("Could not find token '{}'"), id))?;
+            .chain_err(|| format!(t!("Could not find token '{}'"), id))?;
         Token::new(self, token, Some(id))
     }
 }
@@ -96,7 +96,7 @@ impl Voice {
         unsafe {
             Pointer::create(&CLSID_SpVoice)
                     .map(|voice| Voice(voice, engine.clone()))
-                    .chain_err(|| text!("Could not create a TTS voice"))
+                    .chain_err(|| t!("Could not create a TTS voice"))
         }
     }
 
@@ -106,7 +106,7 @@ impl Voice {
         unsafe {
             cvt(self.0.Speak(text.as_ptr(), flags, ptr::null_mut()))
                 .map(|_| ())
-                .chain_err(|| text!("Error while speaking"))
+                .chain_err(|| t!("Error while speaking"))
         }
     }
 
@@ -114,7 +114,7 @@ impl Voice {
         unsafe {
             cvt(self.0.SetVoice(&mut *token.token))
                 .map(|_| ())
-                .chain_err(|| text!("Could not set the TTS voice"))
+                .chain_err(|| t!("Could not set the TTS voice"))
         }
     }
 
@@ -122,7 +122,7 @@ impl Voice {
         unsafe {
             cvt(self.0.SetVolume(volume as w::USHORT))
                 .map(|_| ())
-                .chain_err(|| text!("Could not set the speech volume"))
+                .chain_err(|| t!("Could not set the speech volume"))
         }
     }
 
@@ -130,7 +130,7 @@ impl Voice {
         unsafe {
             cvt(self.0.SetRate(rate as w::c_long))
                 .map(|_| ())
-                .chain_err(|| text!("Could not set the speech rate"))
+                .chain_err(|| t!("Could not set the speech rate"))
         }
     }
 }
@@ -145,12 +145,12 @@ pub struct Token {
 impl Token {
     fn new(engine: &Rc<SpeechEngine>, mut token: Pointer<w::ISpObjectToken>, id: Option<&str>) -> Result<Token> {
         let description = get_token_description(&mut token)
-             .chain_err(|| text!("Could not obtain the token description"))?;
+             .chain_err(|| t!("Could not obtain the token description"))?;
 
         let id = if let Some(id) = id {
             id.to_string()
         } else {
-            get_id_from_token(&mut token).chain_err(|| text!("Could not obtain the token ID"))?
+            get_id_from_token(&mut token).chain_err(|| t!("Could not obtain the token ID"))?
         };
 
         Ok(Token {

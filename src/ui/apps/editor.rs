@@ -35,7 +35,7 @@ impl Editor {
 
 impl App for Editor {
     fn title(&self) -> &str {
-        text!("Text editor")
+        t!("Text editor")
     }
 
     fn update_ui(&mut self, root: Id, ui: &mut UiCell) {

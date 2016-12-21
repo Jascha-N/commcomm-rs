@@ -46,7 +46,7 @@ impl Port {
 
     pub fn enumerate() -> Result<Vec<Port>> {
         let ports = serial_enumerate::enumerate_serial_ports()
-            .chain_err(|| text!("Could not enumerate serial ports"))?;
+            .chain_err(|| t!("Could not enumerate serial ports"))?;
         Ok(ports.iter().map(|port| Port(OsString::from(port))).collect())
     }
 
@@ -55,7 +55,7 @@ impl Port {
     }
 
     pub fn open(&self) -> Result<SystemPort> {
-        serial::open(&self.name()).chain_err(|| text!("Serial port could not be opened"))
+        serial::open(&self.name()).chain_err(|| t!("Serial port could not be opened"))
     }
 }
 
@@ -94,19 +94,19 @@ impl ResponseCode {
             ResponseCode::InvalidParam
         ];
 
-        CODES.get(code as usize).map_or_else(|| bail!(text!("Unknown error code: {}"), code), |code| Ok(*code))
+        CODES.get(code as usize).map_or_else(|| bail!(t!("Unknown error code: {}"), code), |code| Ok(*code))
     }
 }
 
 impl Display for ResponseCode {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         let message = match *self {
-            ResponseCode::JsonParse => text!("Could not parse the request"),
-            ResponseCode::JsonAlloc => text!("JSON buffer is full"),
-            ResponseCode::RequestTooLong => text!("Request too long"),
-            ResponseCode::UnknownCommand => text!("Unknown command"),
-            ResponseCode::BufferTooSmall => text!("Response buffer too small"),
-            ResponseCode::InvalidParam => text!("Illegal parameter")
+            ResponseCode::JsonParse => t!("Could not parse the request"),
+            ResponseCode::JsonAlloc => t!("JSON buffer is full"),
+            ResponseCode::RequestTooLong => t!("Request too long"),
+            ResponseCode::UnknownCommand => t!("Unknown command"),
+            ResponseCode::BufferTooSmall => t!("Response buffer too small"),
+            ResponseCode::InvalidParam => t!("Illegal parameter")
         };
         write!(fmt, "{}", message)
     }
@@ -199,26 +199,26 @@ pub struct Arduino(SystemPort);
 
 impl Arduino {
     fn cdc_reset(port: &Port) -> Result<()> {
-        info!(text!("Arduino is being reset."));
+        info!(t!("Arduino is being reset."));
         let mut port = port.open()?;
         port.reconfigure(&|settings| {
             settings.set_baud_rate(serial::Baud1200)?;
             Ok(())
-        }).chain_err(|| text!("Serial port could not be configured"))?;
-        port.set_dtr(false).chain_err(|| text!("Serial error"))?;
+        }).chain_err(|| t!("Serial port could not be configured"))?;
+        port.set_dtr(false).chain_err(|| t!("Serial error"))?;
 
         Ok(())
     }
 
     fn wait_for_bootloader(mut prev_ports: BTreeSet<Port>) -> Result<Option<Port>> {
-        info!(text!("Waiting for the bootloader port."));
+        info!(t!("Waiting for the bootloader port."));
         let start = Instant::now();
         while Instant::now().duration_since(start).as_secs() < 10 {
             let ports = BTreeSet::from_iter(Port::enumerate()?);
             {
                 let new_port = ports.difference(&prev_ports).next();
                 if let Some(new_port) = new_port {
-                    info!(text!("Bootloader port found: {}."), new_port);
+                    info!(t!("Bootloader port found: {}."), new_port);
                     return Ok(Some(new_port.clone()));
                 }
             }
@@ -227,25 +227,25 @@ impl Arduino {
 
             stdthread::sleep(Duration::from_millis(100));
         }
-        warn!(text!("Waiting for bootloader port timed out."));
+        warn!(t!("Waiting for bootloader port timed out."));
         Ok(None)
     }
 
     fn run_avrdude(port: &Port) -> Result<()> {
         let temp_dir = TempDir::new(env!("CARGO_PKG_NAME"))
-            .chain_err(|| text!("Temporary folder could not be created"))?;
+            .chain_err(|| t!("Temporary folder could not be created"))?;
 
         let avrdude_conf_path = temp_dir.path().join("avrdude.conf");
         File::create(&avrdude_conf_path).and_then(|mut file| {
             file.write_all(board::AVRDUDE_CONFIG)
-        }).chain_err(|| text!("Could not write to the AVRDUDE configuration file"))?;
+        }).chain_err(|| t!("Could not write to the AVRDUDE configuration file"))?;
 
         let program_path = temp_dir.path().join("program.hex");
         File::create(&program_path).and_then(|mut file| {
             file.write_all(board::PROGRAM)
-        }).chain_err(|| text!("Could not write to the sketch file"))?;
+        }).chain_err(|| t!("Could not write to the sketch file"))?;
 
-        info!(text!("The AVRDUDE process is being started."));
+        info!(t!("The AVRDUDE process is being started."));
         let mut command = Command::new("avrdude");
 
         #[cfg(windows)]
@@ -263,7 +263,7 @@ impl Arduino {
                                  .stdout(Stdio::null())
                                  .stdin(Stdio::null())
                                  .spawn()
-                                 .chain_err(|| text!("Could not start the AVRDUDE process"))?;
+                                 .chain_err(|| t!("Could not start the AVRDUDE process"))?;
 
         let stderr = process.stderr.take().unwrap();
         stdthread::spawn(move || {
@@ -278,37 +278,37 @@ impl Arduino {
         });
 
         let status = process.wait_timeout(Duration::from_secs(60))
-                            .chain_err(|| text!("Error while waiting for the AVRDUDE process"))?;
+                            .chain_err(|| t!("Error while waiting for the AVRDUDE process"))?;
         if let Some(status) = status {
             if status.success() {
                 Ok(())
             } else {
-                Err(format!(text!("Uploading with AVRDUDE failed with error code: {}"),
+                Err(format!(t!("Uploading with AVRDUDE failed with error code: {}"),
                             status.code().map_or("<none>".to_string(), |code| code.to_string())).into())
             }
         } else {
-            process.kill().chain_err(|| text!("Could not kill the AVRDUDE process"))?;
-            bail!(text!("Waiting for the AVRDUDE process to finish timed out"));
+            process.kill().chain_err(|| t!("Could not kill the AVRDUDE process"))?;
+            bail!(t!("Waiting for the AVRDUDE process to finish timed out"));
         }
     }
 
     fn wait_for_sketch(port: &Port) -> Result<bool> {
-        info!(text!("Waiting for the sketch port."));
+        info!(t!("Waiting for the sketch port."));
         let start = Instant::now();
         while Instant::now().duration_since(start).as_secs() < 2 {
             if Port::enumerate()?.contains(port) {
-                info!(text!("Found sketch port: {}."), port);
+                info!(t!("Found sketch port: {}."), port);
                 return Ok(true);
             }
             stdthread::sleep(Duration::from_millis(100));
         }
 
-        warn!(text!("Waiting for sketch port timed out."));
+        warn!(t!("Waiting for sketch port timed out."));
         Ok(false)
     }
 
     pub fn upload(port: &Port) -> Result<Cow<Port>> {
-        info!(text!("Preparing to upload the sketch."));
+        info!(t!("Preparing to upload the sketch."));
         let bootloader_port = if board::USE_1200BPS_TOUCH {
             let ports = BTreeSet::from_iter(Port::enumerate()?);
             Arduino::cdc_reset(port)?;
@@ -323,7 +323,7 @@ impl Arduino {
         };
 
         Arduino::run_avrdude(&bootloader_port)?;
-        info!(text!("Upload successful."));
+        info!(t!("Upload successful."));
 
         let sketch_port = if board::WAIT_FOR_UPLOAD_PORT && Arduino::wait_for_sketch(port)? {
             Cow::Borrowed(port)
@@ -335,21 +335,21 @@ impl Arduino {
     }
 
     fn verify(&mut self) -> Result<()> {
-        info!(text!("Verifying sketch."));
+        info!(t!("Verifying sketch."));
         self.device_info().chain_err(|| ErrorKind::ArduinoVerification(None)).and_then(|info| {
             if let Some(info) = info {
-                info!(text!("Device information received."));
-                info!(text!("Device name: {}."), info.name());
-                info!(text!("Sketch version: {}."), info.version());
-                info!(text!("Timestamp: {}."), info.timestamp().format(text!("%Y-%m-%d %H:%M:%S")));
+                info!(t!("Device information received."));
+                info!(t!("Device name: {}."), info.name());
+                info!(t!("Sketch version: {}."), info.version());
+                info!(t!("Timestamp: {}."), info.timestamp().format(t!("%Y-%m-%d %H:%M:%S")));
 
                 if info != *board::DEVICE_INFO {
-                    bail!(ErrorKind::ArduinoVerification(Some(text!("Device information does not match").to_string())));
+                    bail!(ErrorKind::ArduinoVerification(Some(t!("Device information does not match").to_string())));
                 }
 
-                info!(text!("Verification successful."));
+                info!(t!("Verification successful."));
             } else {
-                info!(text!("No device information available; skipping verification."));
+                info!(t!("No device information available; skipping verification."));
             }
 
             Ok(())
@@ -357,7 +357,7 @@ impl Arduino {
     }
 
     pub fn open(port: &Port, verify: bool) -> Result<Arduino> {
-        info!(text!("Opening sketch port on {}."), port);
+        info!(t!("Opening sketch port on {}."), port);
         let mut serial = port.open()?;
         serial.reconfigure(&|settings| {
             settings.set_baud_rate(serial::Baud115200)?;
@@ -367,7 +367,7 @@ impl Arduino {
             Ok(())
         }).and_then(|_| {
             serial.set_timeout(Duration::from_millis(100))
-        }).chain_err(|| text!("Serial port could not be configured"))?;
+        }).chain_err(|| t!("Serial port could not be configured"))?;
 
         let mut buffer = Vec::new();
         let _ = serial.read_to_end(&mut buffer);
@@ -390,13 +390,13 @@ impl Arduino {
 
         let json = serde_json::to_string(&request).unwrap();
         writeln!(serial, "{}", json)
-            .chain_err(|| ErrorKind::Io(text!("Request could not be sent to the Arduino").to_string()))?;
+            .chain_err(|| ErrorKind::Io(t!("Request could not be sent to the Arduino").to_string()))?;
         let _ = serial.flush();
-        debug!(text!("Request sent: {}."), json);
+        debug!(t!("Request sent: {}."), json);
 
         let mut buffer = String::with_capacity(20);
         for byte in serial.bytes() {
-            let byte = byte.chain_err(|| ErrorKind::Io(text!("Arduino response could not be received").to_string()))?;
+            let byte = byte.chain_err(|| ErrorKind::Io(t!("Arduino response could not be received").to_string()))?;
             match byte {
                 b'\r' => {}
                 b'\n' => {
@@ -407,14 +407,14 @@ impl Arduino {
                 }
             }
         }
-        debug!(text!("Response received: {}."), buffer);
-        let result = serde_json::from_str::<Value>(&buffer).chain_err(|| text!("Could not parse response"))?;
+        debug!(t!("Response received: {}."), buffer);
+        let result = serde_json::from_str::<Value>(&buffer).chain_err(|| t!("Could not parse response"))?;
         if result.is_i64() || result.is_u64() {
             let code = ResponseCode::from_code(result.as_u64().unwrap())?;
 
             Err(ErrorKind::ArduinoResponse(command.to_string(), code).into())
         } else {
-            serde_json::from_value(result).chain_err(|| text!("Could not deserialize the response"))
+            serde_json::from_value(result).chain_err(|| t!("Could not deserialize the response"))
         }
     }
 

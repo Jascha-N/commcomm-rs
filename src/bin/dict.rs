@@ -10,18 +10,18 @@ use std::io::{BufRead, BufReader};
 use std::path::{PathBuf, Path};
 
 fn main() {
-    let matches = App::new(text!("commcomm-rs dictionary tool"))
+    let matches = App::new(t!("commcomm-rs dictionary tool"))
                       .version(crate_version!())
                       .author(crate_authors!())
-                      .about(text!("Builds a dictionary file from word-frequency file."))
+                      .about(t!("Builds a dictionary file from word-frequency file."))
                       .arg(Arg::with_name("OUTPUT")
                                .short("o")
                                .long("output")
                                .value_name("FILE")
-                               .help(text!("Sets a custom output file"))
+                               .help(t!("Sets a custom output file"))
                                .takes_value(true))
                       .arg(Arg::with_name("INPUT")
-                               .help(text!("The input file to use"))
+                               .help(t!("The input file to use"))
                                .required(true))
                       .get_matches();
 

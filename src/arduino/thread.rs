@@ -67,7 +67,7 @@ impl ArduinoController {
 
     pub fn set_sensor(&self, id: u8, config: SensorConfig) -> Result<()> {
         self.command_sender.as_ref().unwrap().send(Command::SetSensor(id, config))
-            .chain_err(|| text!("Could not change the sensor setting"))
+            .chain_err(|| t!("Could not change the sensor setting"))
     }
 
     pub fn sensor(&self, id: u8) -> Option<SensorConfig> {
@@ -80,7 +80,7 @@ impl Drop for ArduinoController {
         if !thread::panicking() {
             mem::drop(self.command_sender.take());
             mem::drop(self.event_receiver.take());
-            info!(text!("Waiting for Arduino thread to finish."));
+            info!(t!("Waiting for Arduino thread to finish."));
             let _ = self.handle.take().unwrap().join();
         }
     }
@@ -104,7 +104,7 @@ impl ArduinoThread {
                     Ok(arduino) => Some(arduino),
                     Err(error) => {
                         log_full_error(&error);
-                        info!(text!("Retrying in {} seconds."), 5);
+                        info!(t!("Retrying in {} seconds."), 5);
                         thread::sleep(Duration::from_secs(5));
                         continue;
                     }
@@ -119,11 +119,11 @@ impl ArduinoThread {
                             log_full_error(&error);
                             if let ErrorKind::Io(_) = *error.kind() {
                                 self.connected.store(false, Ordering::Relaxed);
-                                info!(text!("Retrying in {} seconds."), 5);
+                                info!(t!("Retrying in {} seconds."), 5);
                                 thread::sleep(Duration::from_secs(5));
                                 break;
                             } else {
-                                info!(text!("Retrying in {} seconds."), 2);
+                                info!(t!("Retrying in {} seconds."), 2);
                                 thread::sleep(Duration::from_secs(2));
                             }
                         }
@@ -131,7 +131,7 @@ impl ArduinoThread {
                 }
             }
 
-            info!(text!("The Arduino thread finished."));
+            info!(t!("The Arduino thread finished."));
         })
     }
 
@@ -154,7 +154,7 @@ impl ArduinoThread {
             Error(ErrorKind::ArduinoVerification(_), _) if !self.upload_tried => {
                 self.upload_tried = true;
                 log_full_error(&error);
-                info!(text!("Trying to reupload the sketch once."));
+                info!(t!("Trying to reupload the sketch once."));
                 self.port = Arduino::upload(&self.port)?.into_owned();
                 Arduino::open(&self.port, true)
             }
@@ -183,7 +183,7 @@ impl ArduinoThread {
                         match self.event_sender.try_send(event) {
                             Ok(()) => {}
                             error @ Err(TrySendError::Full(_)) => {
-                                return error.chain_err(|| text!("Event buffer is full"));
+                                return error.chain_err(|| t!("Event buffer is full"));
                             }
                             Err(TrySendError::Disconnected(_)) => {
                                 break 'outer;

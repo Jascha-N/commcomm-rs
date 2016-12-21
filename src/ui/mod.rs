@@ -84,7 +84,7 @@ impl Window {
             window.get_inner_size_pixels().unwrap()
         };
 
-        info!(text!("Window created. OpenGL version: {}."), display.get_opengl_version_string());
+        info!(t!("Window created. OpenGL version: {}."), display.get_opengl_version_string());
 
         let mut theme = Theme {
             name: "commcomm-rs standard".to_string(),
@@ -112,7 +112,7 @@ impl Window {
 
         let renderer = Renderer::new(&display)
                                 .map_err(IntoBoxedError::into_boxed_error)
-                                .unwrap();//.chain_err(|| text!("Could not create glium renderer"))?;
+                                .unwrap();//.chain_err(|| t!("Could not create glium renderer"))?;
         let apps = app_factories.iter().map(|factory| factory(ui.widget_id_generator())).collect();
 
         Ok(Window {
@@ -148,14 +148,14 @@ impl Window {
             })
         } else {
             display_build.build_glium()
-        }.chain_err(|| text!("Could not create the window"))
+        }.chain_err(|| t!("Could not create the window"))
     }
 
     fn toggle_fullscreen(&mut self) -> Result<()> {
         self.display = Window::build_display(self.display_builders.1.clone())?;
         self.renderer = Renderer::new(&self.display)
                                  .map_err(IntoBoxedError::into_boxed_error)
-                                 .unwrap();//.chain_err(|| text!("Could not create glium renderer"))?;
+                                 .unwrap();//.chain_err(|| t!("Could not create glium renderer"))?;
 
         let window = self.display.get_window().unwrap();
         if let Some(win_rect) = self.ui.rect_of(self.ui.window) {
@@ -230,11 +230,11 @@ impl Window {
                ])
                .set(self.widgets.ROOT_CANVAS, ui);
 
-        TitleBar::new(text!("Mode"), self.widgets.MODE_CANVAS)
+        TitleBar::new(t!("Mode"), self.widgets.MODE_CANVAS)
                  .place_on_kid_area(false)
                  .set(self.widgets.MODE_TITLE, ui);
 
-        TitleBar::new(text!("Control"), self.widgets.CONTROL_CANVAS)
+        TitleBar::new(t!("Control"), self.widgets.CONTROL_CANVAS)
                  .place_on_kid_area(false)
                  .set(self.widgets.CONTROL_TITLE, ui);
 
@@ -282,8 +282,8 @@ impl Window {
             let mut target = self.display.draw();
             self.renderer.draw(&self.display, &mut target, &self.image_map)
                          .map_err(IntoBoxedError::into_boxed_error)
-                         .unwrap();//.chain_err(|| text!("An error occured while drawing"))?;
-            target.finish().chain_err(|| text!("Error while swapping buffers"))?;
+                         .unwrap();//.chain_err(|| t!("An error occured while drawing"))?;
+            target.finish().chain_err(|| t!("Error while swapping buffers"))?;
         }
 
         Ok(())
@@ -329,16 +329,16 @@ fn glutin_to_arduino_event(event: &GlutinEvent) -> Option<ArduinoEvent> {
 
 pub fn run() -> StdResult<(), ()> {
     fn run() -> Result<()> {
-        info!(text!("Application started. Version: {}. Debug mode: {}."),
+        info!(t!("Application started. Version: {}. Debug mode: {}."),
             env!("CARGO_PKG_VERSION"),
-            if cfg!(debug_assertions) { text!("Yes") } else { text!("No") });
+            if cfg!(debug_assertions) { t!("Yes") } else { t!("No") });
         let mut window = Window::new(&[&Speech::new_app, &Editor::new_app])?;
         while window.update()? {
             thread::sleep(Duration::from_millis(1));
         }
-        info!(text!("The window was closed."));
+        info!(t!("The window was closed."));
         mem::drop(window);
-        info!(text!("The application is shutting down."));
+        info!(t!("The application is shutting down."));
 
         Ok(())
     }
@@ -346,9 +346,9 @@ pub fn run() -> StdResult<(), ()> {
     if let Err(error) = run() {
         let mut chain = error.iter();
         let mut message = String::new();
-        let _ = write!(message, text!("An error has occurred: {}."), chain.next().unwrap());
+        let _ = write!(message, t!("An error has occurred: {}."), chain.next().unwrap());
         for cause in chain {
-            let _ = write!(message, text!("\n  Caused by:\n    {}."), cause);
+            let _ = write!(message, t!("\n  Caused by:\n    {}."), cause);
         }
 
         println!("{}", message);

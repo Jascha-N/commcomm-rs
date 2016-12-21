@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! text {
+macro_rules! t {
     ("Yes") => ("Ja");
     ("No") => ("Nee");
     ("Mode") => ("Modus");
