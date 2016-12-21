@@ -165,22 +165,22 @@ impl DeviceInfo {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SensorConfig {
-    limits: (u16, u16),
+    range: (u16, u16),
     thresholds: (u8, u8)
 }
 
 impl SensorConfig {
     pub fn new(min: u16, max: u16) -> SensorConfig {
-        debug_assert!(min < max);
         debug_assert!(max < 1024);
+        debug_assert!(min < 1024);
         SensorConfig {
-            limits: (min, max),
+            range: (min, max),
             thresholds: (u8::MIN, u8::MAX)
         }
     }
 
-    pub fn limits(&self) -> (u16, u16) {
-        self.limits
+    pub fn range(&self) -> (u16, u16) {
+        self.range
     }
 
     pub fn thresholds(&self) -> (u8, u8) {
@@ -426,7 +426,7 @@ impl Arduino {
     }
 
     pub fn set_sensor(&mut self, id: u8, config: &SensorConfig) -> Result<()> {
-        let (min, max) = config.limits();
+        let (min, max) = config.range();
         let (low, high) = config.thresholds();
 
         self.send_request("set_sensor", &[
