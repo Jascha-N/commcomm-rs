@@ -365,7 +365,12 @@ impl Arduino {
             settings.set_parity(serial::ParityNone);
             settings.set_stop_bits(serial::Stop1);
             Ok(())
+        }).and_then(|_| {
+            serial.set_timeout(Duration::from_millis(100))
         }).chain_err(|| text!("Serial port could not be configured"))?;
+
+        let mut buffer = Vec::new();
+        let _ = serial.read_to_end(&mut buffer);
 
         let mut arduino = Arduino(serial);
         if verify {
