@@ -4,7 +4,7 @@ version = "0.1.0"
 dependencies = [
  "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.19.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "conrod 0.47.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "conrod 0.47.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cursive 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -170,7 +170,7 @@ dependencies = [
 
 [[package]]
 name = "conrod"
-version = "0.47.2"
+version = "0.47.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "daggy 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1111,7 +1111,7 @@ dependencies = [
 "checksum chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9213f7cd7c27e95c2b57c49f0e69b1ea65b27138da84a170133fd21b07659c00"
 "checksum clap 2.19.2 (registry+https://github.com/rust-lang/crates.io-index)" = "305ad043f009db535a110200541d4567b63e172b1fe030313fbb92565da7ed24"
 "checksum cocoa 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3afe4613f57a171039a98db1773f5840b5743cf85aaf03afb65ddfade4f4a9db"
-"checksum conrod 0.47.2 (registry+https://github.com/rust-lang/crates.io-index)" = "039aa24e195c20d9e39815bdcf6324ea37adc07bfaf193a88220efc90dfcbc39"
+"checksum conrod 0.47.3 (registry+https://github.com/rust-lang/crates.io-index)" = "51b53155cd87405b06020aabf8cd4de720f88f9d2167df0efb6e04787cc271cd"
 "checksum core-foundation 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "20a6d0448d3a99d977ae4a2aa5a98d886a923e863e81ad9ff814645b6feb3bbd"
 "checksum core-foundation-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "05eed248dc504a5391c63794fe4fb64f46f071280afaa1b73308f3c0ce4574c5"
 "checksum core-graphics 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0c56c6022ba22aedbaa7d231be545778becbe1c7aceda4c82ba2f2084dd4c723"
