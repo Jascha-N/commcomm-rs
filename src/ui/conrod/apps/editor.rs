@@ -1,4 +1,4 @@
-use ui::App;
+use super::App;
 
 use conrod::{Positionable, Sizeable, UiCell};
 use conrod::widget::{id, Canvas, Id, Scrollbar, TextEdit, Widget};

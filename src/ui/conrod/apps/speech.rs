@@ -1,15 +1,13 @@
-use ui::App;
+use super::App;
 use speech::{SpeechEngine, SpeechEngineImpl, Voice};
 
 use chrono::{Local, NaiveTime};
 
-use conrod::{Colorable, Positionable, Sizeable, UiCell};
-use conrod::color;
+use conrod::{Sizeable, UiCell};
 use conrod::text as raw_text;
-use conrod::widget::{id, text, text_box, Id, List, Text, TextBox, Widget};
+use conrod::widget::{id, text, Id, List, Text, Widget};
 
 use std::collections::VecDeque;
-use std::mem;
 
 
 
@@ -22,7 +20,6 @@ widget_ids! {
     #[allow(non_snake_case)]
     struct Widgets {
         CANVAS,
-        TEXT,
         LINES
     }
 }
@@ -60,34 +57,19 @@ impl App for Speech {
         t!("Speech")
     }
 
+    fn process_line(&mut self, line: &str) {
+        self.lines.push_front(Line {
+            time: Local::now().time(),
+            text: line.to_string()
+        })
+    }
+
     fn update_ui(&mut self, root: Id, ui: &mut UiCell) {
         let font_size = text::Style::new().font_size(&ui.theme);
 
-        let text_events = TextBox::new(&self.text)
-                                  .color(color::LIGHT_GREY)
-                                  .kid_area_w_of(root)
-                                  .mid_top_of(root)
-                                  .set(self.widgets.TEXT, ui);
-
-        for event in text_events {
-            match event {
-                text_box::Event::Update(text) => {
-                    self.text = text;
-                }
-                text_box::Event::Enter if !self.text.is_empty() => {
-                    self.voice.speak(&self.text).unwrap();
-                    self.lines.push_front(Line {
-                        time: Local::now().time(),
-                        text: mem::replace(&mut self.text, String::new())
-                    })
-                }
-                _ => {}
-            }
-        }
-
         let (mut items, _) = List::new(self.lines.len(), raw_text::height(1, font_size, 0.0) * 2.0)
                                   .kid_area_wh_of(root)
-                                  .down_from(self.widgets.TEXT, 20.0)
+                                  //.down_from(self.widgets.TEXT, 20.0)
                                   .set(self.widgets.LINES, ui);
 
         while let Some(item) = items.next(ui) {

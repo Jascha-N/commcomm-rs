@@ -39,7 +39,7 @@ macro_rules! t {
     ("The window was closed.") => ("Het venster werd gesloten.");
     ("The application is shutting down.") => ("De applicatie wordt afgesloten.");
     ("An error has occurred: {}.") => ("Er is een fout opgetreden: {}.");
-    ("\n  Caused by:\n    {}.") => ("\n  Veroorzaakt door:\n    {}.");
+    ("\nCaused by:\n    {}.") => ("\nVeroorzaakt door:\n    {}.");
     ("Could not read the configuration file") => ("Kon het configuratiebestand niet inlezen");
     ("Syntax error: {}.") => ("Syntaxisfout: {}.");
     ("The configuration file contains syntax errors") => ("Het configuratiebestand bevat syntaxisfouten");

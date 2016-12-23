@@ -9,6 +9,7 @@ mod speech;
 
 pub trait App {
     fn title(&self) -> &str;
+    fn process_line(&mut self, _line: &str) {}
     fn update_ui(&mut self, root: Id, ui: &mut UiCell);
 }
 
