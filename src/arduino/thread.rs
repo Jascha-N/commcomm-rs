@@ -178,8 +178,8 @@ impl ArduinoThread {
                     arduino.set_sensor(id, &config)?;
                 }
                 Err(TryRecvError::Empty) => {
-                    let events = arduino.poll_events()?;
-                    for event in events {
+                    let event = arduino.poll_event()?;
+                    if let Some(event) = event {
                         match self.event_sender.try_send(event) {
                             Ok(()) => {}
                             error @ Err(TrySendError::Full(_)) => {

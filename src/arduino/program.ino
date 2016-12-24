@@ -45,7 +45,7 @@ enum class CommandResult {
 static const uint8_t NUM_SENSORS = NUM_ANALOG_INPUTS;
 
 // Number of events stored in the event queue
-static const size_t EVENT_QUEUE_SIZE = 4;
+static const size_t EVENT_QUEUE_SIZE = 10;
 
 // Maximum request/response length including null-terminator
 static const size_t MESSAGE_BUFFER_SIZE = 256;
@@ -127,23 +127,20 @@ static CommandResult process_request(char *buffer) {
 #else
         return CommandResult::SUCCESS_NULL;
 #endif
-    } else if (strcmp(command, "poll_events") == 0) {
-        JsonArray& json_response = json_buffer.createArray();
+    } else if (strcmp(command, "poll_event") == 0) {
+        Event event;
+        if (!events.pull(&event)) {
+            return CommandResult::SUCCESS_NULL;
+        }
+
+        JsonObject& json_response = json_buffer.createObject();
         if (!json_response.success()) {
             return CommandResult::ERROR_JSON_ALLOC;
         }
 
-        Event event;
-        while (events.pull(&event)) {
-            JsonObject& json_event = json_response.createNestedObject();
-            if (!json_event.success()) {
-                return CommandResult::ERROR_JSON_ALLOC;
-            }
-
-            const char *type = event.type == EventType::SENSOR_FLEXED ? "flexed" : "extended";
-            if (!json_event.set(type, event.sensor_id)) {
-                return CommandResult::ERROR_JSON_ALLOC;
-            }
+        const char *type = event.type == EventType::SENSOR_FLEXED ? "flexed" : "extended";
+        if (!json_response.set(type, event.sensor_id)) {
+            return CommandResult::ERROR_JSON_ALLOC;
         }
 
         if (json_response.measureLength() > MESSAGE_BUFFER_SIZE - 1) {

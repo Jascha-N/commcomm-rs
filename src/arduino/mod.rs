@@ -422,8 +422,8 @@ impl Arduino {
         self.send_request("device_info", &[])
     }
 
-    pub fn poll_events(&mut self) -> Result<Vec<Event>> {
-        self.send_request("poll_events", &[])
+    pub fn poll_event(&mut self) -> Result<Option<Event>> {
+        self.send_request("poll_event", &[])
     }
 
     pub fn raw_values(&mut self) -> Result<Vec<Option<u16>>> {
@@ -447,5 +447,11 @@ impl Arduino {
         self.send_request("unset_sensor", &[
             ("id", serde_json::to_value(id))
         ])
+    }
+}
+
+impl Drop for Arduino {
+    fn drop(&mut self) {
+        let _ = self.0.set_dtr(false);
     }
 }
