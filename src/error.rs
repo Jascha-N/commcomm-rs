@@ -1,4 +1,11 @@
 error_chain! {
+    foreign_links {
+        TextureCreation(::glium::texture::TextureCreationError);
+        ProgramChooserCreation(::glium::program::ProgramChooserCreationError);
+        VertexCreation(::glium::vertex::BufferCreationError);
+        Draw(::glium::DrawError);
+    }
+
     errors {
         Io(message: String) {
             description(t!("I/O error"))
@@ -17,24 +24,20 @@ error_chain! {
     }
 }
 
-pub trait IntoBoxedError {
-    fn into_boxed_error(self) -> Box<::std::error::Error + Send>;
-}
-
-impl IntoBoxedError for ::conrod::backend::glium::RendererCreationError {
-    fn into_boxed_error(self) -> Box<::std::error::Error + Send> {
-        match self {
-            ::conrod::backend::glium::RendererCreationError::Texture(error) => Box::new(error),
-            ::conrod::backend::glium::RendererCreationError::Program(error) => Box::new(error)
+impl From<::conrod::backend::glium::RendererCreationError> for Error {
+    fn from(error: ::conrod::backend::glium::RendererCreationError) -> Self {
+        match error {
+            ::conrod::backend::glium::RendererCreationError::Texture(error) => error.into(),
+            ::conrod::backend::glium::RendererCreationError::Program(error) => error.into()
         }
     }
 }
 
-impl IntoBoxedError for ::conrod::backend::glium::DrawError {
-    fn into_boxed_error(self) -> Box<::std::error::Error + Send> {
-        match self {
-            ::conrod::backend::glium::DrawError::Buffer(error) => Box::new(error),
-            ::conrod::backend::glium::DrawError::Draw(error) => Box::new(error)
+impl From<::conrod::backend::glium::DrawError> for Error {
+    fn from(error: ::conrod::backend::glium::DrawError) -> Self {
+        match error {
+            ::conrod::backend::glium::DrawError::Buffer(error) => error.into(),
+            ::conrod::backend::glium::DrawError::Draw(error) => error.into()
         }
     }
 }

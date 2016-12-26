@@ -104,8 +104,8 @@ impl Window {
         ui.fonts.insert(FontCollection::from_bytes(FONT).into_font().unwrap());
 
         let renderer = Renderer::new(&display)
-                                .map_err(IntoBoxedError::into_boxed_error)
-                                .unwrap();//.chain_err(|| t!("Could not create glium renderer"))?;
+                                .map_err(Error::from)
+                                .chain_err(|| t!("Could not create glium renderer"))?;
         let apps = app_factories.iter().map(|factory| factory(ui.widget_id_generator())).collect();
 
         Ok(Window {
@@ -146,8 +146,8 @@ impl Window {
     fn toggle_fullscreen(&mut self) -> Result<()> {
         self.display = Window::build_display(self.display_builders.1.clone())?;
         self.renderer = Renderer::new(&self.display)
-                                 .map_err(IntoBoxedError::into_boxed_error)
-                                 .unwrap();//.chain_err(|| t!("Could not create glium renderer"))?;
+                                 .map_err(Error::from)
+                                 .chain_err(|| t!("Could not create glium renderer"))?;
 
         let window = self.display.get_window().unwrap();
         if let Some(win_rect) = self.ui.rect_of(self.ui.window) {
@@ -327,8 +327,8 @@ impl Window {
             self.renderer.fill(&self.display, primitives, &self.image_map);
             let mut target = self.display.draw();
             self.renderer.draw(&self.display, &mut target, &self.image_map)
-                         .map_err(IntoBoxedError::into_boxed_error)
-                         .unwrap();//.chain_err(|| t!("An error occured while drawing"))?;
+                         .map_err(Error::from)
+                         .chain_err(|| t!("An error occured while drawing"))?;
             target.finish().chain_err(|| t!("Error while swapping buffers"))?;
         }
 
