@@ -18,7 +18,7 @@ dependencies = [
  "serde_derive 0.8.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.8.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serial 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serial_enumerate 0.1.0 (git+https://github.com/Geemili/serial-enumerate.git)",
+ "serial_enumerate 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "user32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -815,7 +815,7 @@ dependencies = [
 [[package]]
 name = "serial_enumerate"
 version = "0.1.0"
-source = "git+https://github.com/Geemili/serial-enumerate.git#298f5ac4ec20fb377d2bc69fd2a9d83b186ded17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "error-chain 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "winreg 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1189,7 +1189,7 @@ dependencies = [
 "checksum serde_derive 0.8.21 (registry+https://github.com/rust-lang/crates.io-index)" = "6e7ad1e74679b92730ca39c361ea125e2846df337c5d94d084eb2f7837c1843d"
 "checksum serde_json 0.8.4 (registry+https://github.com/rust-lang/crates.io-index)" = "3f7d3c184d35801fb8b32b46a7d58d57dbcc150b0eb2b46a1eb79645e8ecfd5b"
 "checksum serial 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cb5e265c52312c3e72a08afb6ac62ba3b9d1778c2193f57d74e307334689c7c8"
-"checksum serial_enumerate 0.1.0 (git+https://github.com/Geemili/serial-enumerate.git)" = "<none>"
+"checksum serial_enumerate 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "06bba1379b168d33cf1534a60c2f87e0f9ae22be446f2838faa120f641f42998"
 "checksum shared_library 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "fb04126b6fcfd2710fb5b6d18f4207b6c535f2850a7e1a43bcd526d44f30a79a"
 "checksum shell32-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "72f20b8f3c060374edb8046591ba28f62448c369ccbdc7b02075103fb3a9e38d"
 "checksum smallvec 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "fcc8d19212aacecf95e4a7a2179b26f7aeb9732a915cf01f05b0d3e044865410"
