@@ -13,6 +13,7 @@ struct SensorConfig {
 struct SensorState {
     bool flexed;
     int raw;
+    uint8_t mapped;
 };
 
 enum class EventType {
@@ -170,7 +171,9 @@ static CommandResult process_request(char *buffer) {
         sensor.active = false;
 
         return CommandResult::SUCCESS_NULL;
-    } else if (strcmp(command, "raw_values") == 0) {
+    } else if (strcmp(command, "sensor_values") == 0) {
+        bool raw = json_request.get<bool>("raw");
+
         JsonArray& json_response = json_buffer.createArray();
         if (!json_response.success()) {
             return CommandResult::ERROR_JSON_ALLOC;
@@ -180,7 +183,7 @@ static CommandResult process_request(char *buffer) {
             SensorState& state = sensor_state[id];
 
             if (config.active) {
-                if (!json_response.add(state.raw)) {
+                if (!json_response.add(raw ? state.raw : static_cast<int>(state.mapped))) {
                     return CommandResult::ERROR_JSON_ALLOC;
                 }
             } else {
@@ -212,17 +215,15 @@ static void process_inputs() {
         }
 
         state.raw = analogRead(id);
-        // Limit sensor input to usable range and then map to [0, 255] range
-        uint8_t input = map(constrain(state.raw, config.min, config.max),
-                            config.min, config.max, 0, 255);
+        state.mapped = constrain(map(state.raw, config.min, config.max, 0, 0xff), 0, 0xff);
         bool new_event = false;
         Event event;
 
-        if (input > config.high && !state.flexed) {
+        if (state.mapped > config.high && !state.flexed) {
             event = {EventType::SENSOR_FLEXED, id};
             state.flexed = true;
             new_event = true;
-        } else if (input < config.low && state.flexed) {
+        } else if (state.mapped < config.low && state.flexed) {
             event = {EventType::SENSOR_EXTENDED, id};
             state.flexed = false;
             new_event = true;
@@ -255,7 +256,7 @@ void loop() {
         while (events.pull(&dummy)) {}
 
         for (uint8_t id = 0; id < NUM_SENSORS; id++) {
-            sensor_state[id] = {false, 0};
+            sensor_state[id] = {false, 0, 0};
             sensor_config[id].active = false;
         }
     }

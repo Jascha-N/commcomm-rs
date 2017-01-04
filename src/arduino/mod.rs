@@ -94,7 +94,9 @@ impl ResponseCode {
             ResponseCode::InvalidParam
         ];
 
-        CODES.get(code as usize).map_or_else(|| bail!(t!("Unknown error code: {}"), code), |code| Ok(*code))
+        CODES.get(code as usize)
+             .cloned()
+             .map_or_else(|| bail!(t!("Unknown error code: {}"), code), Ok)
     }
 }
 
@@ -426,8 +428,8 @@ impl Arduino {
         self.send_request("poll_event", &[])
     }
 
-    pub fn raw_values(&mut self) -> Result<Vec<Option<u16>>> {
-        self.send_request("raw_values", &[])
+    pub fn sensor_values(&mut self, raw: bool) -> Result<Vec<Option<u16>>> {
+        self.send_request("sensor_values", &[("raw", serde_json::to_value(raw))])
     }
 
     pub fn set_sensor(&mut self, id: u8, config: &SensorConfig) -> Result<()> {
