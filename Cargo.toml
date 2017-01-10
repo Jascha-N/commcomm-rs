@@ -52,13 +52,16 @@ version = "0.2"
 default-features = false
 features = ["serde"]
 
+[replace."glutin:0.7.2"]
+path = "../glutin"
+
+[build-dependencies]
+regex = "0.2"
+
 [features]
 default = ["conrod", "lang_en-US"]
 "lang_nl-NL" = []
 "lang_en-US" = []
-
-[build-dependencies]
-regex = "0.2"
 
 [profile.release]
 lto = true

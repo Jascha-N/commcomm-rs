@@ -35,13 +35,12 @@ fn expand_prefs<'a>(prefs: &HashMap<&'a str, String>) -> HashMap<&'a str, String
         let mut new_prefs = HashMap::new();
         for (&key, value) in &prefs {
             new_prefs.insert(key, substitution_regex.replace_all(value, |captures: &Captures| {
-                prefs.get(captures.at(1).unwrap())
-                     .map_or(captures.at(0).unwrap(), AsRef::as_ref)
+                prefs.get(captures.get(1).unwrap().as_str())
+                     .map_or(captures.get(0).unwrap().as_str(), AsRef::as_ref)
                      .to_string()
-            }));
+            }).to_string());
         }
         if prefs == new_prefs {
-            prefs = new_prefs;
             break;
         }
         prefs = new_prefs;
