@@ -1,4 +1,4 @@
 .cargo/
 target/
-build.options.json
+build.toml
 config.toml
