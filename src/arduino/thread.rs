@@ -3,7 +3,7 @@ use error::*;
 
 use std::fmt::Write;
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError, TrySendError};
 use std::thread::{self, JoinHandle};
@@ -31,8 +31,7 @@ pub struct ArduinoController {
     handle: Option<JoinHandle<()>>,
     connected: Arc<AtomicBool>,
     command_sender: Option<SyncSender<Command>>,
-    event_receiver: Option<Receiver<Event>>,
-    sensor_thresholds: Arc<Mutex<Vec<(u8, u8)>>>
+    event_receiver: Option<Receiver<Event>>
 }
 
 impl ArduinoController {
@@ -41,23 +40,20 @@ impl ArduinoController {
         let (command_sender, command_receiver) = mpsc::sync_channel(10);
 
         let connected = Arc::new(AtomicBool::new(false));
-        let sensor_thresholds = Arc::new(Mutex::new(sensor_thresholds));
-        let controller = ArduinoThread {
-            arduino: None,
+        let thread = ArduinoThread {
             upload_tried: false,
             port: port,
             connected: connected.clone(),
             event_sender: event_sender,
             command_receiver: command_receiver,
-            sensor_thresholds: sensor_thresholds.clone()
+            sensor_thresholds: sensor_thresholds
         };
 
         ArduinoController {
-            handle: Some(controller.run()),
+            handle: Some(thread.run()),
             connected: connected,
             command_sender: Some(command_sender),
             event_receiver: Some(event_receiver),
-            sensor_thresholds: sensor_thresholds
         }
     }
 
@@ -78,10 +74,6 @@ impl ArduinoController {
         self.command_sender.as_ref().unwrap().send(command)
             .chain_err(|| t!("Could not change the sensor thresholds"))
     }
-
-    pub fn sensor_thresholds(&self, id: u8) -> Option<(u8, u8)> {
-        self.sensor_thresholds.lock().unwrap().get(id as usize).cloned()
-    }
 }
 
 impl Drop for ArduinoController {
@@ -96,48 +88,49 @@ impl Drop for ArduinoController {
 }
 
 struct ArduinoThread {
-    arduino: Option<Arduino>,
     upload_tried: bool,
     port: Port,
     connected: Arc<AtomicBool>,
     event_sender: SyncSender<Event>,
     command_receiver: Receiver<Command>,
-    sensor_thresholds: Arc<Mutex<Vec<(u8, u8)>>>
+    sensor_thresholds: Vec<(u8, u8)>
 }
 
 impl ArduinoThread {
     fn run(mut self) -> JoinHandle<()> {
+        fn retry(seconds: u64) {
+            info!(t!("Retrying in {} seconds."), seconds);
+            thread::sleep(Duration::from_secs(seconds));
+        }
+
         thread::spawn(move || {
             while !self.stopping() {
-                self.arduino = match self.restart() {
-                    Ok(arduino) => Some(arduino),
+                let mut arduino = match self.restart() {
+                    Ok(arduino) => arduino,
                     Err(error) => {
                         log_full_error(&error);
-                        info!(t!("Retrying in {} seconds."), 5);
-                        thread::sleep(Duration::from_secs(5));
+                        retry(5);
                         continue;
                     }
                 };
                 self.connected.store(true, Ordering::Relaxed);
                 loop {
-                    match self.process_commands() {
+                    match self.process_commands(&mut arduino) {
                         Ok(_) => {
                             break;
                         }
                         Err(error) => {
                             log_full_error(&error);
                             if let ErrorKind::Io(_) = *error.kind() {
-                                self.connected.store(false, Ordering::Relaxed);
-                                info!(t!("Retrying in {} seconds."), 5);
-                                thread::sleep(Duration::from_secs(5));
+                                retry(5);
                                 break;
                             } else {
-                                info!(t!("Retrying in {} seconds."), 2);
-                                thread::sleep(Duration::from_secs(2));
+                                retry(2);
                             }
                         }
                     }
                 }
+                self.connected.store(false, Ordering::Relaxed);
             }
 
             info!(t!("The Arduino thread finished."));
@@ -169,20 +162,19 @@ impl ArduinoThread {
             }
             error => Err(error)
         }).and_then(|mut arduino| {
-            for (id, &(trigger, release)) in self.sensor_thresholds.lock().unwrap().iter().enumerate() {
+            for (id, &(trigger, release)) in self.sensor_thresholds.iter().enumerate() {
                 arduino.set_thresholds(id as u8, trigger, release)?;
             }
             Ok(arduino)
         })
     }
 
-    fn process_commands(&mut self) -> Result<()> {
-        let arduino = self.arduino.as_mut().unwrap();
-
+    fn process_commands(&mut self, arduino: &mut Arduino) -> Result<()> {
         'outer: loop {
             match self.command_receiver.try_recv() {
                 Ok(Command::SetThresholds { id, trigger, release }) => {
                     arduino.set_thresholds(id, trigger, release)?;
+                    self.sensor_thresholds[id as usize] = (trigger, release);
                 }
                 Err(TryRecvError::Empty) => {
                     let event = arduino.poll_event()?;
