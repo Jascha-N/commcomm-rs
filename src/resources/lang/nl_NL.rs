@@ -48,7 +48,7 @@ macro_rules! t {
     ("Builds a dictionary file from word-frequency file.") => ("Genereert een woordenboekbestand van een woord-frequentielijst.");
     ("Sets a custom output file") => ("Stelt een aangepast uitvoerbestand in");
     ("The input file to use") => ("Het invoerbestand om te gebruiken");
-    ("Could not change the sensor setting") => ("Kon sensorinstelling niet wijzigen");
+    ("Could not change the sensor thresholds") => ("Kon sensordrempelwaarden niet wijzigen");
     ("Waiting for Arduino thread to finish.") => ("Bezig met wachten op Arduino-thread.");
     ("Retrying in {} seconds.") => ("Opnieuw proberen over {} seconden.");
     ("The Arduino thread finished.") => ("De Arduino-thread is gestopt.");
@@ -98,5 +98,6 @@ macro_rules! t {
     ("Could not parse response") => ("Kon het antwoord niet parseren");
     ("Could not deserialize the response") => ("Kon het antwoord niet deserialiseren");
     ("Serial error") => ("Seriële fout");
+    ("An error occured while drawing") => ("Er trad een fout op tijdens het tekenen");
     //($text:expr) => (concat!("(Vertaling ontbreekt) ", $text));
 }

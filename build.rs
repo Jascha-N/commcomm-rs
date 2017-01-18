@@ -1,14 +1,36 @@
 extern crate regex;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
+extern crate toml;
 
 use regex::{Captures, Regex};
 
 use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File};
-use std::io::{self, BufWriter, Write};
+use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{self, SystemTime};
+
+#[derive(Deserialize)]
+struct Config {
+    board: String,
+    calibration_pin: Option<u8>,
+    sensor_pins: Vec<u8>,
+    paths: Paths
+}
+
+#[derive(Deserialize)]
+struct Paths {
+    home: Option<PathBuf>,
+    #[serde(default)]
+    hardware: Vec<PathBuf>,
+    #[serde(default)]
+    tools: Vec<PathBuf>,
+    #[serde(default)]
+    libraries: Vec<PathBuf>,
+}
 
 fn load_prefs_from_str(pref_str: &str) -> HashMap<&str, String> {
     let mut prefs = HashMap::new();
@@ -53,16 +75,16 @@ fn write_board_file(path: &Path, prefs: &HashMap<&str, String>, name: &str, time
     if *tool != "avrdude" {
         panic!("Only AVR boards are supported.");
     }
-    let protocol: String = prefs.get("upload.protocol").map(Clone::clone).unwrap_or_default();
+    let protocol: String = prefs.get("upload.protocol").cloned().unwrap_or_default();
     let speed: usize = prefs.get("upload.speed").and_then(|s| s.parse().ok()).unwrap_or_default();
     let use_1200bps_touch: bool = prefs.get("upload.use_1200bps_touch")
                                        .and_then(|s| s.parse().ok()).unwrap_or_default();
     let wait_for_upload_port: bool = prefs.get("upload.wait_for_upload_port")
                                           .and_then(|s| s.parse().ok()).unwrap_or_default();
-    let mcu: String = prefs.get("build.mcu").map(Clone::clone).unwrap_or_default();
+    let mcu: String = prefs.get("build.mcu").cloned().unwrap_or_default();
     let config_path: PathBuf = prefs.get("config.path").map_or(PathBuf::new(), PathBuf::from);
     let build_path: PathBuf = prefs.get("build.path").map_or(PathBuf::new(), PathBuf::from);
-    let project_name: String = prefs.get("build.project_name").map(Clone::clone).unwrap_or_default();
+    let project_name: String = prefs.get("build.project_name").cloned().unwrap_or_default();
 
     let mut writer = BufWriter::new(File::create(path).unwrap());
     writeln!(writer, r##"pub const PROTOCOL: &'static str = r#"{}"#;"##, protocol).unwrap();
@@ -77,7 +99,7 @@ fn write_board_file(path: &Path, prefs: &HashMap<&str, String>, name: &str, time
              name, env!("CARGO_PKG_VERSION"), timestamp).unwrap();
 }
 
-fn builder_command(compile: bool, src_path: &Path, out_path: &Path, prefs: Option<HashMap<&str, String>>) -> Command {
+fn builder_command(compile: bool, src_path: &Path, out_path: &Path, mut extra_flags: String, mut defines: Option<HashMap<&str, String>>) -> Command {
     let mut command = Command::new("arduino-builder");
     command.arg("-libraries").arg("libraries")
            .arg("-build-path").arg(out_path)
@@ -85,43 +107,46 @@ fn builder_command(compile: bool, src_path: &Path, out_path: &Path, prefs: Optio
            .arg("-verbose")
            .arg(if compile { "-compile" } else { "-dump-prefs" });
 
-    if Path::new("build.options.json").exists() {
-        command.arg("-build-options-file").arg("build.options.json");
-    } else {
-        if let Some(home) = env::var_os("ARDUINO_HOME").map(PathBuf::from) {
-            command.arg("-built-in-libraries").arg(home.join("libraries"))
-                   .arg("-hardware").arg(home.join("hardware"))
-                   .arg("-tools").arg(home.join("hardware/tools/avr"))
-                   .arg("-tools").arg(home.join("tools-builder"));
-        }
+    let mut reader = BufReader::new(File::open("build.toml").unwrap());
+    let mut toml = String::new();
+    reader.read_to_string(&mut toml).unwrap();
+    let config = toml::decode_str::<Config>(&toml).unwrap();
 
-        if let Some(board) = env::var_os("ARDUINO_BOARD") {
-            command.arg("-fqbn").arg(board);
+    command.arg("-fqbn").arg(&config.board);
+    if let Some(home) = config.paths.home.or_else(|| env::var_os("ARDUINO_HOME").map(PathBuf::from)) {
+        command.arg("-built-in-libraries").arg(home.join("libraries"))
+                .arg("-hardware").arg(home.join("hardware"))
+                .arg("-tools").arg(home.join("hardware/tools/avr"))
+                .arg("-tools").arg(home.join("tools-builder"));
+    }
+    for path in &config.paths.hardware {
+        command.arg("-hardware").arg(path);
+    }
+    for path in &config.paths.tools {
+        command.arg("-tools").arg(path);
+    }
+    for path in &config.paths.libraries {
+        command.arg("-libraries").arg(path);
+    }
+    if let Some(ref mut defines) = defines.as_mut() {
+        if let Some(calibration_pin) = config.calibration_pin {
+            defines.insert("CALIBRATION_PIN", calibration_pin.to_string());
         }
+        let sensor_pins = config.sensor_pins.iter()
+                                            .map(|pin| format!("{{{:#04x}, A{}}}", pin, pin))
+                                            .collect::<Vec<_>>()
+                                            .join(", ");
+        defines.insert("SENSOR_PINS", format!("{{{}}}", sensor_pins));
+    }
 
-        if let Some(hardware) = env::var_os("ARDUINO_HARDWARE") {
-            for path in env::split_paths(&hardware) {
-                command.arg("-hardware").arg(path);
-            }
-        }
-
-        if let Some(tools) = env::var_os("ARDUINO_TOOLS") {
-            for path in env::split_paths(&tools) {
-                command.arg("-tools").arg(path);
-            }
-        }
-
-        if let Some(libraries) = env::var_os("ARDUINO_LIBRARIES") {
-            for path in env::split_paths(&libraries) {
-                command.arg("-libraries").arg(path);
-            }
+    if let Some(defines) = defines {
+        for (key, value) in defines {
+            extra_flags.push_str(&format!(" '-D{}={}'", key, value));
         }
     }
 
-    if let Some(prefs) = prefs {
-        for (key, value) in prefs {
-            command.arg("-prefs").arg(format!("{}={}", key, value));
-        }
+    if !extra_flags.is_empty() {
+        command.arg("-prefs").arg(format!("build.extra_flags={}", extra_flags));
     }
 
     command.arg(src_path);
@@ -131,13 +156,13 @@ fn builder_command(compile: bool, src_path: &Path, out_path: &Path, prefs: Optio
 
 pub fn main() {
     let timestamp = SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_secs();
-    let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let src = Path::new("src/arduino/program.ino");
-    let arduino_out = out.join("arduino");
-    fs::create_dir_all(&arduino_out).unwrap();
+    let out_path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let src_path = Path::new("src/arduino/program.ino");
+    let build_path = out_path.join("arduino");
+    fs::create_dir_all(&build_path).unwrap();
 
     // Dump preferences
-    let output = builder_command(false, src, &arduino_out, None).output().unwrap();
+    let output = builder_command(false, src_path, &build_path, String::new(), None).output().unwrap();
     let _ = io::stdout().write_all(&output.stdout);
     let _ = io::stderr().write_all(&output.stderr);
     if !output.status.success() {
@@ -148,21 +173,19 @@ pub fn main() {
     let prefs_str = String::from_utf8_lossy(&output.stdout);
     let prefs = load_prefs_from_str(&prefs_str);
     let expanded_prefs = expand_prefs(&prefs);
-    let name = expanded_prefs.get("name").map(Clone::clone).unwrap_or_default();
-    write_board_file(&out.join("board.rs"), &expanded_prefs, &name, timestamp);
+    let name = expanded_prefs.get("name").cloned().unwrap_or_default();
+    write_board_file(&out_path.join("board.rs"), &expanded_prefs, &name, timestamp);
 
 
 
     // Compile sketch
-    let mut extra_prefs = HashMap::new();
-    let extra_flags = format!(r#"{}'-DDEVICEINFO_NAME="{}"' '-DDEVICEINFO_VERSION="{}"' -DDEVICEINFO_TIMESTAMP={:#x}"#,
-                              prefs.get("build.extra_flags").map_or_else(String::new, |flags| format!("{} ", flags)),
-                              name,
-                              env!("CARGO_PKG_VERSION"),
-                              timestamp);
-    extra_prefs.insert("build.extra_flags", extra_flags);
+    let extra_flags = prefs.get("build.extra_flags").cloned().unwrap_or_default();
+    let mut defines = HashMap::new();
+    defines.insert("DEVICEINFO_NAME", format!(r#""{}""#, name));
+    defines.insert("DEVICEINFO_VERSION", format!(r#""{}""#, env!("CARGO_PKG_VERSION")));
+    defines.insert("DEVICEINFO_TIMESTAMP", format!("{:#x}", timestamp));
 
-    let output = builder_command(true, src, &arduino_out, Some(extra_prefs)).output().unwrap();
+    let output = builder_command(true, src_path, &build_path, extra_flags, Some(defines)).output().unwrap();
     let _ = io::stdout().write_all(&output.stdout);
     let _ = io::stderr().write_all(&output.stderr);
     if !output.status.success() {
@@ -176,6 +199,6 @@ pub fn main() {
         }
     }
 
-    println!("cargo:rerun-if-changed=src/arduino/program.ino");
-    println!("cargo:rerun-if-changed=build.options.json");
+    println!("cargo:rerun-if-changed={}", src_path.display());
+    println!("cargo:rerun-if-changed=build.toml");
 }

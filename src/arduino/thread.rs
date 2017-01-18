@@ -1,4 +1,4 @@
-use super::{Arduino, Event, SensorConfig, Port};
+use super::{Arduino, Event, Port};
 use error::*;
 
 use std::fmt::Write;
@@ -10,7 +10,11 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 enum Command {
-    SetSensor(u8, SensorConfig)
+    SetThresholds {
+        id: u8,
+        trigger: u8,
+        release: u8
+    }
 }
 
 pub struct PollEvents<'a>(&'a Receiver<Event>);
@@ -28,16 +32,16 @@ pub struct ArduinoController {
     connected: Arc<AtomicBool>,
     command_sender: Option<SyncSender<Command>>,
     event_receiver: Option<Receiver<Event>>,
-    sensor_config: Arc<Mutex<Vec<Option<SensorConfig>>>>
+    sensor_thresholds: Arc<Mutex<Vec<(u8, u8)>>>
 }
 
 impl ArduinoController {
-    pub fn new(port: Port, sensor_config: Vec<Option<SensorConfig>>) -> ArduinoController {
+    pub fn new(port: Port, sensor_thresholds: Vec<(u8, u8)>) -> ArduinoController {
         let (event_sender, event_receiver) = mpsc::sync_channel(10);
         let (command_sender, command_receiver) = mpsc::sync_channel(10);
 
         let connected = Arc::new(AtomicBool::new(false));
-        let sensor_config = Arc::new(Mutex::new(sensor_config));
+        let sensor_thresholds = Arc::new(Mutex::new(sensor_thresholds));
         let controller = ArduinoThread {
             arduino: None,
             upload_tried: false,
@@ -45,7 +49,7 @@ impl ArduinoController {
             connected: connected.clone(),
             event_sender: event_sender,
             command_receiver: command_receiver,
-            sensor_config: sensor_config.clone()
+            sensor_thresholds: sensor_thresholds.clone()
         };
 
         ArduinoController {
@@ -53,7 +57,7 @@ impl ArduinoController {
             connected: connected,
             command_sender: Some(command_sender),
             event_receiver: Some(event_receiver),
-            sensor_config: sensor_config
+            sensor_thresholds: sensor_thresholds
         }
     }
 
@@ -65,13 +69,18 @@ impl ArduinoController {
         PollEvents(self.event_receiver.as_ref().unwrap())
     }
 
-    pub fn set_sensor(&self, id: u8, config: SensorConfig) -> Result<()> {
-        self.command_sender.as_ref().unwrap().send(Command::SetSensor(id, config))
-            .chain_err(|| t!("Could not change the sensor setting"))
+    pub fn set_sensor_thresholds(&self, id: u8, trigger: u8, release: u8) -> Result<()> {
+        let command = Command::SetThresholds {
+            id: id,
+            trigger: trigger,
+            release: release
+        };
+        self.command_sender.as_ref().unwrap().send(command)
+            .chain_err(|| t!("Could not change the sensor thresholds"))
     }
 
-    pub fn sensor(&self, id: u8) -> Option<SensorConfig> {
-        self.sensor_config.lock().unwrap().get(id as usize).and_then(|s| *s)
+    pub fn sensor_thresholds(&self, id: u8) -> Option<(u8, u8)> {
+        self.sensor_thresholds.lock().unwrap().get(id as usize).cloned()
     }
 }
 
@@ -93,7 +102,7 @@ struct ArduinoThread {
     connected: Arc<AtomicBool>,
     event_sender: SyncSender<Event>,
     command_receiver: Receiver<Command>,
-    sensor_config: Arc<Mutex<Vec<Option<SensorConfig>>>>
+    sensor_thresholds: Arc<Mutex<Vec<(u8, u8)>>>
 }
 
 impl ArduinoThread {
@@ -160,10 +169,8 @@ impl ArduinoThread {
             }
             error => Err(error)
         }).and_then(|mut arduino| {
-            for (id, sensor) in self.sensor_config.lock().unwrap().iter().enumerate() {
-                if let Some(ref sensor) = *sensor {
-                    arduino.set_sensor(id as u8, sensor)?;
-                }
+            for (id, &(trigger, release)) in self.sensor_thresholds.lock().unwrap().iter().enumerate() {
+                arduino.set_thresholds(id as u8, trigger, release)?;
             }
             Ok(arduino)
         })
@@ -174,8 +181,8 @@ impl ArduinoThread {
 
         'outer: loop {
             match self.command_receiver.try_recv() {
-                Ok(Command::SetSensor(id, config)) => {
-                    arduino.set_sensor(id, &config)?;
+                Ok(Command::SetThresholds { id, trigger, release }) => {
+                    arduino.set_thresholds(id, trigger, release)?;
                 }
                 Err(TryRecvError::Empty) => {
                     let event = arduino.poll_event()?;

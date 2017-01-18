@@ -165,37 +165,6 @@ impl DeviceInfo {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct SensorConfig {
-    range: (u16, u16),
-    thresholds: (u8, u8)
-}
-
-impl SensorConfig {
-    pub fn new(min: u16, max: u16) -> SensorConfig {
-        debug_assert!(max < 1024);
-        debug_assert!(min < 1024);
-        SensorConfig {
-            range: (min, max),
-            thresholds: (u8::MIN, u8::MAX)
-        }
-    }
-
-    pub fn range(&self) -> (u16, u16) {
-        self.range
-    }
-
-    pub fn thresholds(&self) -> (u8, u8) {
-        self.thresholds
-    }
-
-    pub fn set_thresholds(&mut self, low: u8, high: u8) {
-        debug_assert!(low < high);
-        self.thresholds = (low, high);
-    }
-}
-
-
 
 pub struct Arduino(SystemPort);
 
@@ -253,8 +222,7 @@ impl Arduino {
         #[cfg(windows)]
         ::std::os::windows::process::CommandExt::creation_flags(&mut command, ::winapi::CREATE_NO_WINDOW);
 
-        let mut process = command.arg("-v").arg("-v")
-                                 .arg("-C").arg(avrdude_conf_path)
+        let mut process = command.arg("-C").arg(avrdude_conf_path)
                                  .arg("-p").arg(board::MCU)
                                  .arg("-c").arg(board::PROTOCOL)
                                  .arg("-P").arg(port.name())
@@ -428,26 +396,15 @@ impl Arduino {
         self.send_request("poll_event", &[])
     }
 
-    pub fn sensor_values(&mut self, raw: bool) -> Result<Vec<Option<u16>>> {
-        self.send_request("sensor_values", &[("raw", serde_json::to_value(raw))])
+    pub fn read_values(&mut self, raw: bool) -> Result<Vec<Option<u16>>> {
+        self.send_request("read_values", &[("raw", serde_json::to_value(raw))])
     }
 
-    pub fn set_sensor(&mut self, id: u8, config: &SensorConfig) -> Result<()> {
-        let (min, max) = config.range();
-        let (low, high) = config.thresholds();
-
-        self.send_request("set_sensor", &[
+    pub fn set_thresholds(&mut self, id: u8, trigger: u8, release: u8) -> Result<()> {
+        self.send_request("set_thresholds", &[
             ("id", serde_json::to_value(id)),
-            ("min", serde_json::to_value(min)),
-            ("max", serde_json::to_value(max)),
-            ("low", serde_json::to_value(low)),
-            ("high", serde_json::to_value(high))
-        ])
-    }
-
-    pub fn unset_sensor(&mut self, id: u8) -> Result<()> {
-        self.send_request("unset_sensor", &[
-            ("id", serde_json::to_value(id))
+            ("trigger", serde_json::to_value(trigger)),
+            ("release", serde_json::to_value(release))
         ])
     }
 }

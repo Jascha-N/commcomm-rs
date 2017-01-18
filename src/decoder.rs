@@ -188,12 +188,12 @@ impl Decoder {
 
     pub fn predict_input(&self) -> Vec<&Input> {
         self.input.split_last().map(|(last, rest)| {
-            let lower = Bound::Included(&self.input);
+            let lower = Bound::Included(&self.input[..]);
             last.checked_add(1).map(|last| {
                 let upper = rest.iter().cloned().chain(iter::once(last)).collect::<Vec<_>>();
-                self.scheme.range(lower, Bound::Excluded(&upper)).map(|(_, v)| v).collect()
+                self.scheme.range::<[_], _>((lower, Bound::Excluded(&upper[..]))).map(|(_, v)| v).collect()
             }).unwrap_or_else(|| {
-                self.scheme.range(lower, Bound::Unbounded::<&[_]>).map(|(_, v)| v).collect()
+                self.scheme.range::<[_], _>((lower, Bound::Unbounded)).map(|(_, v)| v).collect()
             })
         }).unwrap_or_else(|| {
             self.scheme.values().collect()

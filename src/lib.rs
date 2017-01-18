@@ -1,4 +1,3 @@
-//#![cfg_attr(debug_assertions, allow(dead_code))]
 #![recursion_limit = "1024"]
 #![feature(btree_range, collections_bound)]
 #![cfg_attr(windows, feature(windows_process_extensions))]

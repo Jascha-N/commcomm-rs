@@ -16,7 +16,7 @@ doc = false
 [dependencies]
 chrono = "0.2"
 clap = "2.19"
-env_logger = "0.3"
+env_logger = "0.4"
 error-chain = "0.7"
 flate2 = "0.2"
 lazy_static = "0.2"
@@ -57,6 +57,13 @@ path = "../glutin"
 
 [build-dependencies]
 regex = "0.2"
+serde = "0.8"
+serde_derive = "0.8"
+
+[build-dependencies.toml]
+version = "0.2"
+default-features = false
+features = ["serde"]
 
 [features]
 default = ["conrod", "lang_en-US"]
